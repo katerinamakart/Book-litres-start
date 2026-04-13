@@ -565,6 +565,161 @@ body {
 .footer__sub { margin-top: 6px; }
 .footer a { color: var(--blue-light); text-decoration: none; }
 
+/* ===== SCROLL DROPLET ===== */
+.sdrop-track {
+  position: fixed;
+  right: 22px;
+  top: 0;
+  width: 48px;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* The droplet */
+.sdrop {
+  position: absolute;
+  right: 0;
+  top: 6vh;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: top 0.08s linear;
+  will-change: top;
+}
+
+.sdrop__body {
+  font-size: 1.8rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+  filter: drop-shadow(0 4px 8px rgba(14,165,233,0.5));
+}
+
+/* Trail — visible while falling */
+.sdrop__trail {
+  width: 3px;
+  height: 0;
+  background: linear-gradient(to bottom, rgba(14,165,233,0.55), transparent);
+  border-radius: 2px;
+  margin-top: -2px;
+  transition: height 0.12s ease;
+}
+
+/* ── Falling state ── */
+.sdrop--falling .sdrop__body {
+  transform: scaleY(1.35) scaleX(0.78);
+  filter: drop-shadow(0 6px 12px rgba(14,165,233,0.6));
+}
+.sdrop--falling .sdrop__trail {
+  height: 28px;
+}
+
+/* ── Paused / floating in air ── */
+.sdrop--paused .sdrop__body {
+  transform: scaleY(1) scaleX(1);
+  animation: sdropFloat 1.6s ease-in-out infinite;
+}
+.sdrop--paused .sdrop__trail {
+  height: 0;
+}
+@keyframes sdropFloat {
+  0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
+  30%     { transform: translateY(-5px) rotate(3deg) scale(1.05); }
+  60%     { transform: translateY(-2px) rotate(-2deg) scale(0.97); }
+}
+
+/* ── Splash state ── */
+.sdrop--splash .sdrop__body {
+  animation: sdropSplash 0.32s ease-out forwards;
+}
+@keyframes sdropSplash {
+  0%   { transform: scaleY(1.3) scaleX(0.8); opacity: 1; }
+  40%  { transform: scaleY(0.25) scaleX(1.7); opacity: 1; }
+  100% { transform: scaleY(0) scaleX(2); opacity: 0; }
+}
+.sdrop--hidden { opacity: 0; pointer-events: none; }
+
+/* ── Puddle ── */
+.sdrop-puddle {
+  position: absolute;
+  bottom: 8vh;
+  right: -8px;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.sdrop-puddle--active { opacity: 1; }
+
+.sdrop-puddle__ellipse {
+  width: 40px;
+  height: 14px;
+  background: radial-gradient(ellipse, rgba(14,165,233,0.55) 0%, rgba(14,165,233,0.15) 70%, transparent 100%);
+  border-radius: 50%;
+  margin-bottom: -4px;
+}
+
+/* Expanding ripple rings */
+.sdrop-puddle__ring {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0.35);
+  border: 1.5px solid rgba(14,165,233,0.5);
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+}
+.sdrop-puddle--active .sdrop-puddle__ring {
+  animation: puddle-ring 1.2s ease-out forwards;
+}
+.sdrop-puddle--active .sdrop-puddle__ring--1 { animation-delay: 0.05s; }
+.sdrop-puddle--active .sdrop-puddle__ring--2 { animation-delay: 0.25s; }
+.sdrop-puddle--active .sdrop-puddle__ring--3 { animation-delay: 0.45s; }
+
+@keyframes puddle-ring {
+  0%   { width: 8px; height: 8px; opacity: 0.8; }
+  100% { width: 52px; height: 52px; opacity: 0; }
+}
+
+/* Upward splash droplets */
+.sdrop-puddle__splash {
+  position: absolute;
+  bottom: 12px;
+  width: 4px;
+  height: 10px;
+  background: rgba(14,165,233,0.7);
+  border-radius: 50% 50% 40% 40%;
+  opacity: 0;
+}
+.sdrop-puddle__splash--l { left: 12px; }
+.sdrop-puddle__splash--r { right: 12px; }
+.sdrop-puddle--active .sdrop-puddle__splash--l {
+  animation: splash-left 0.5s ease-out 0.05s forwards;
+}
+.sdrop-puddle--active .sdrop-puddle__splash--r {
+  animation: splash-right 0.5s ease-out 0.05s forwards;
+}
+@keyframes splash-left {
+  0%   { transform: translate(0, 0) rotate(-20deg); opacity: 1; }
+  100% { transform: translate(-10px, -18px) rotate(-50deg); opacity: 0; }
+}
+@keyframes splash-right {
+  0%   { transform: translate(0, 0) rotate(20deg); opacity: 1; }
+  100% { transform: translate(10px, -18px) rotate(50deg); opacity: 0; }
+}
+
+/* Hide on very small screens */
+@media (max-width: 480px) {
+  .sdrop-track { right: 8px; }
+  .sdrop__body { font-size: 1.3rem; }
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 820px) {
   .hero__inner { flex-direction: column; text-align: center; gap: 40px; }
