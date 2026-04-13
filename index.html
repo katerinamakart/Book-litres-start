@@ -14,6 +14,22 @@
   <!-- Custom cursor -->
   <div class="cursor" id="cursor">💧</div>
 
+  <!-- ========== SCROLL DROPLET ========== -->
+  <div class="sdrop-track" aria-hidden="true">
+    <div class="sdrop" id="sdrop">
+      <div class="sdrop__body">💧</div>
+      <div class="sdrop__trail"></div>
+    </div>
+    <div class="sdrop-puddle" id="sdrop-puddle">
+      <div class="sdrop-puddle__ellipse"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--1"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--2"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--3"></div>
+      <div class="sdrop-puddle__splash sdrop-puddle__splash--l"></div>
+      <div class="sdrop-puddle__splash sdrop-puddle__splash--r"></div>
+    </div>
+  </div>
+
   <!-- ========== HERO ========== -->
   <header class="hero" id="hero">
 
@@ -335,6 +351,78 @@
         if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
       });
     });
+
+    // ── Scroll droplet animation ──
+    (function () {
+      const drop    = document.getElementById('sdrop');
+      const puddle  = document.getElementById('sdrop-puddle');
+      if (!drop) return;
+
+      const START_VH   = 6;   // top position (vh) when scroll = 0
+      const END_VH     = 88;  // position (vh) just before splash
+      const SPLASH_PCT = 0.97; // trigger splash at 97% scroll
+      const PAUSE_MS   = 120; // ms after last scroll event → "paused"
+
+      let scrollTimer  = null;
+      let hasSplashed  = false;
+      let lastProgress = 0;
+
+      function progress() {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        return max > 0 ? Math.min(window.scrollY / max, 1) : 0;
+      }
+
+      function setPos(p) {
+        const y = START_VH + (END_VH - START_VH) * p;
+        drop.style.top = y + 'vh';
+      }
+
+      function triggerSplash() {
+        drop.classList.add('sdrop--splash');
+        puddle.classList.add('sdrop-puddle--active');
+        setTimeout(() => drop.classList.add('sdrop--hidden'), 320);
+      }
+
+      function resetSplash() {
+        hasSplashed = false;
+        drop.classList.remove('sdrop--splash', 'sdrop--hidden');
+        puddle.classList.remove('sdrop-puddle--active');
+      }
+
+      function onScroll() {
+        const p = progress();
+
+        // reset if scrolled back up
+        if (p < SPLASH_PCT && hasSplashed) resetSplash();
+
+        if (!hasSplashed) {
+          setPos(p);
+          drop.classList.remove('sdrop--paused');
+          drop.classList.add('sdrop--falling');
+
+          if (p >= SPLASH_PCT) {
+            hasSplashed = true;
+            triggerSplash();
+            return;
+          }
+        }
+
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          if (!hasSplashed) {
+            drop.classList.remove('sdrop--falling');
+            drop.classList.add('sdrop--paused');
+          }
+        }, PAUSE_MS);
+
+        lastProgress = p;
+      }
+
+      // init
+      setPos(progress());
+      drop.classList.add('sdrop--paused');
+      window.addEventListener('scroll', onScroll, { passive: true });
+    })();
   </script>
 
 </body>
