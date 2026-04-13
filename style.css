@@ -215,11 +215,35 @@ body {
   width: 100%; height: 100%;
   background: #d6eeff;
   position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
 }
-.book__cover-svg {
+.book__cover-img {
   width: 100%;
-  height: 100%;
+  height: 78%;
+  object-fit: cover;
+  object-position: center top;
   display: block;
+}
+.book__cover-title {
+  background: linear-gradient(to top, rgba(7,60,100,0.92), rgba(7,60,100,0.6) 70%, transparent);
+  padding: 10px 10px 10px;
+  text-align: center;
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.book__title-main {
+  display: block; font-size: 0.62rem; font-weight: 700;
+  color: rgba(255,255,255,0.85); letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.book__title-sub {
+  display: block; font-size: 1.3rem; font-weight: 900;
+  color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  margin-top: 2px;
+}
+.book__title-author {
+  display: block; font-size: 0.6rem; font-weight: 600;
+  color: rgba(255,255,255,0.75); margin-top: 3px;
 }
 
 .book__sky {
