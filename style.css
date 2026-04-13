@@ -616,9 +616,9 @@ body {
 /* ===== SCROLL DROPLET ===== */
 .sdrop-track {
   position: fixed;
-  right: 16px;
+  right: 0;
   top: 0;
-  width: 80px;
+  width: 220px;
   height: 100vh;
   pointer-events: none;
   z-index: 100;
@@ -626,9 +626,9 @@ body {
 
 .sdrop {
   position: absolute;
-  right: 0;
+  right: 8px;
   top: 6vh;
-  width: 80px;
+  width: 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -650,11 +650,10 @@ body {
 
 /* ── Капелька-картинка ── */
 .sdrop__svg {
-  width: 80px;
-  height: 80px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 14px rgba(14,165,233,0.55));
-  mix-blend-mode: multiply; /* убирает белый фон */
+  filter: drop-shadow(0 8px 20px rgba(14,165,233,0.6));
   transition: transform 0.18s ease;
   display: block;
 }
@@ -798,9 +797,16 @@ body {
   100% { width: 100px; height: 100px; opacity: 0;    }
 }
 
+@media (max-width: 768px) {
+  .sdrop-track  { right: 0; width: 120px; }
+  .sdrop        { right: 4px; width: 120px; }
+  .sdrop__svg   { width: 110px; height: 110px; }
+  .sdrop__bubble{ width: 12px; height: 12px; }
+}
 @media (max-width: 480px) {
-  .sdrop-track  { right: 4px; width: 58px; }
-  .sdrop__svg   { width: 46px; }
+  .sdrop-track  { right: 0; width: 80px; }
+  .sdrop        { right: 2px; width: 80px; }
+  .sdrop__svg   { width: 72px; height: 72px; }
   .sdrop__bubble{ width: 9px; height: 9px; }
 }
 
