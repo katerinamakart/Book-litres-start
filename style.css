@@ -229,17 +229,18 @@ body {
 
 .book__kapkap-wrap {
   display: flex; flex-direction: column; align-items: center;
-  margin: 6px 0;
+  flex: 1; justify-content: center; margin: 4px 0 0;
 }
-.book__kapkap { font-size: 3rem; animation: drip 2.5s ease-in-out infinite; }
+.book__kapkap-svg {
+  width: 108px;
+  height: auto;
+  filter: drop-shadow(0 6px 18px rgba(14,165,233,0.45));
+  animation: drip 3s ease-in-out infinite;
+}
 @keyframes drip {
-  0%,100% { transform: translateY(0) scale(1); }
-  60%     { transform: translateY(8px) scale(0.95); }
-}
-.book__kapkap-trail {
-  width: 4px; height: 24px;
-  background: linear-gradient(to bottom, rgba(14,165,233,0.6), transparent);
-  border-radius: 2px; margin-top: -4px;
+  0%,100% { transform: translateY(0) rotate(-2deg) scale(1); }
+  45%     { transform: translateY(-9px) rotate(2deg) scale(1.03); }
+  75%     { transform: translateY(-4px) rotate(-1deg) scale(0.98); }
 }
 
 .book__water {
