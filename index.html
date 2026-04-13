@@ -21,8 +21,9 @@
       <!-- пузырёк над головой -->
       <div class="sdrop__bubble"></div>
 
-      <!-- SVG-персонаж Кап-Кап -->
-      <svg class="sdrop__svg" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg">
+      <!-- Персонаж Кап-Кап -->
+      <img src="IMG_0915.png" alt="" class="sdrop__svg"/>
+      <svg style="display:none" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="kkBody" cx="33%" cy="22%" r="72%">
             <stop offset="0%"   stop-color="#f0f9ff" stop-opacity="0.96"/>
@@ -135,128 +136,12 @@
           <div class="book__spine"></div>
           <div class="book__front">
             <div class="book__illustration">
-
-              <!-- SVG-обложка книги: капелька на облаке -->
-              <svg class="book__cover-svg" viewBox="0 0 192 290" xmlns="http://www.w3.org/2000/svg">
-
-                <!-- Фон: небо -->
-                <rect width="192" height="290" fill="#d6eeff"/>
-                <ellipse cx="50" cy="40" rx="55" ry="40" fill="#fff9d6" opacity="0.7"/>
-                <ellipse cx="160" cy="60" rx="40" ry="30" fill="#e0f4ff" opacity="0.5"/>
-
-                <!-- Солнце -->
-                <circle cx="28" cy="28" r="16" fill="#ffe066" opacity="0.9"/>
-                <circle cx="28" cy="28" r="11" fill="#ffd43b"/>
-
-                <!-- Облака фоновые -->
-                <ellipse cx="155" cy="38" rx="28" ry="14" fill="white" opacity="0.7"/>
-                <ellipse cx="140" cy="34" rx="16" ry="12" fill="white" opacity="0.7"/>
-                <ellipse cx="168" cy="33" rx="14" ry="10" fill="white" opacity="0.7"/>
-
-                <!-- Персонаж Кап-Кап — тело (синяя капелька) -->
-                <!-- Тело -->
-                <path d="M96,58 C97,58 126,93 126,113 C126,130 112,143 96,143 C80,143 66,130 66,113 C66,93 95,58 96,58 Z"
-                      fill="#5bb8d4"/>
-                <!-- Блик на теле -->
-                <ellipse cx="83" cy="84" rx="8" ry="15"
-                         fill="white" opacity="0.35" transform="rotate(-15,83,84)"/>
-                <ellipse cx="87" cy="70" rx="4" ry="7"
-                         fill="white" opacity="0.25" transform="rotate(-15,87,70)"/>
-
-                <!-- Левый глаз -->
-                <circle cx="84"  cy="111" r="10"  fill="white"/>
-                <circle cx="84"  cy="111" r="8"   fill="#1a4a8c"/>
-                <circle cx="84"  cy="111" r="4.5" fill="#0a1e40"/>
-                <circle cx="87"  cy="107" r="2.8" fill="white"/>
-                <circle cx="81"  cy="114" r="1.2" fill="white" opacity="0.6"/>
-
-                <!-- Правый глаз -->
-                <circle cx="108" cy="111" r="10"  fill="white"/>
-                <circle cx="108" cy="111" r="8"   fill="#1a4a8c"/>
-                <circle cx="108" cy="111" r="4.5" fill="#0a1e40"/>
-                <circle cx="111" cy="107" r="2.8" fill="white"/>
-                <circle cx="105" cy="114" r="1.2" fill="white" opacity="0.6"/>
-
-                <!-- Щёчки -->
-                <ellipse cx="70"  cy="122" rx="9" ry="6" fill="#fb923c" opacity="0.65"/>
-                <ellipse cx="122" cy="122" rx="9" ry="6" fill="#fb923c" opacity="0.65"/>
-
-                <!-- Улыбка -->
-                <path d="M82,130 Q96,140 110,130"
-                      stroke="#1a4a8c" stroke-width="2.8" fill="none" stroke-linecap="round"/>
-
-                <!-- Ручки -->
-                <ellipse cx="57"  cy="126" rx="13" ry="8" fill="#5bb8d4" transform="rotate(35,57,126)"/>
-                <ellipse cx="135" cy="126" rx="13" ry="8" fill="#5bb8d4" transform="rotate(-35,135,126)"/>
-
-                <!-- Облако под персонажем -->
-                <ellipse cx="96"  cy="163" rx="55" ry="22" fill="white" opacity="0.95"/>
-                <ellipse cx="70"  cy="152" rx="30" ry="20" fill="white" opacity="0.95"/>
-                <ellipse cx="96"  cy="150" rx="36" ry="22" fill="white" opacity="0.95"/>
-                <ellipse cx="122" cy="152" rx="28" ry="19" fill="white" opacity="0.95"/>
-                <!-- Нижняя часть облака — ровная -->
-                <rect x="41" y="160" width="110" height="22" fill="white" opacity="0.95"/>
-
-                <!-- Деревья/дома вдали (маленькие) -->
-                <ellipse cx="30"  cy="258" rx="14" ry="16" fill="#4caf7d" opacity="0.7"/>
-                <ellipse cx="52"  cy="262" rx="12" ry="13" fill="#3a9a6a" opacity="0.7"/>
-                <ellipse cx="145" cy="256" rx="15" ry="17" fill="#4caf7d" opacity="0.7"/>
-                <ellipse cx="166" cy="260" rx="11" ry="12" fill="#3a9a6a" opacity="0.7"/>
-                <rect x="82" y="255" width="12" height="18" fill="#e8a87c" opacity="0.8"/>
-                <rect x="100" y="257" width="12" height="16" fill="#d4845a" opacity="0.8"/>
-                <!-- Крыши домиков -->
-                <polygon points="82,255 88,247 94,255" fill="#c0392b" opacity="0.8"/>
-                <polygon points="100,257 106,249 112,257" fill="#a93226" opacity="0.8"/>
-
-                <!-- Зелёный луг внизу -->
-                <ellipse cx="96" cy="275" rx="100" ry="18" fill="#68bb8e" opacity="0.6"/>
-
-                <!-- Заголовок на обложке -->
-                <text x="96" y="220" text-anchor="middle"
-                      font-family="Nunito, sans-serif" font-weight="700"
-                      font-size="11" fill="#4a7a9b" letter-spacing="1">ПУТЕШЕСТВИЕ</text>
-                <text x="96" y="238" text-anchor="middle"
-                      font-family="Nunito, sans-serif" font-weight="900"
-                      font-size="20" fill="#1a4a8c">Кап-Кап</text>
-
-                <!-- Автор -->
-                <text x="96" y="278" text-anchor="middle"
-                      font-family="Nunito, sans-serif" font-weight="600"
-                      font-size="9" fill="#5a8fa8">Екатерина Макарова</text>
-              </svg>
-
-                  <!-- Стеклянный блик большой -->
-                  <ellipse cx="33" cy="40" rx="9" ry="18"
-                    fill="white" opacity="0.32" transform="rotate(-16,33,40)"/>
-                  <!-- Блик маленький -->
-                  <ellipse cx="39" cy="24" rx="4" ry="7"
-                    fill="white" opacity="0.22" transform="rotate(-16,39,24)"/>
-
-                  <!-- Левый глаз — белок -->
-                  <ellipse cx="35" cy="67" rx="10" ry="10.5" fill="white" opacity="0.95"/>
-                  <!-- Левый глаз — радужка золотая -->
-                  <ellipse cx="35" cy="67" rx="8"  ry="8.5"  fill="url(#bkEye)"/>
-                  <!-- Левый глаз — зрачок -->
-                  <ellipse cx="35" cy="68" rx="5"  ry="5.5"  fill="#1c1a2e"/>
-                  <!-- Блики на глазу -->
-                  <circle  cx="38" cy="63" r="2.8" fill="white"/>
-                  <circle  cx="33" cy="70" r="1.3" fill="white" opacity="0.65"/>
-
-                  <!-- Правый глаз — белок -->
-                  <ellipse cx="65" cy="67" rx="10" ry="10.5" fill="white" opacity="0.95"/>
-                  <!-- Правый глаз — радужка -->
-                  <ellipse cx="65" cy="67" rx="8"  ry="8.5"  fill="url(#bkEye)"/>
-                  <!-- Правый глаз — зрачок -->
-                  <ellipse cx="65" cy="68" rx="5"  ry="5.5"  fill="#1c1a2e"/>
-                  <circle  cx="68" cy="63" r="2.8" fill="white"/>
-                  <circle  cx="63" cy="70" r="1.3" fill="white" opacity="0.65"/>
-
-                  <!-- Улыбка -->
-                  <path d="M38,84 Q50,93 62,84"
-                    stroke="#5a8fa8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                </svg>
+              <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
+              <div class="book__cover-title">
+                <span class="book__title-main">Путешествие</span>
+                <span class="book__title-sub">Кап-Кап</span>
+                <span class="book__title-author">Екатерина Макарова</span>
               </div>
-
             </div>
           </div>
         </div>
@@ -316,7 +201,9 @@
 
         <!-- Иллюстрация: Кап-Кап на облаке -->
         <div class="excerpt__illo">
-          <svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" class="excerpt__illo-svg">
+          <img src="IMG_0922.jpeg" alt="Кап-Кап на облаке" class="excerpt__illo-svg"/>
+        </div>
+        <div style="display:none"><svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" class="excerpt__illo-svg--old">
             <!-- Фон-овал -->
             <ellipse cx="110" cy="120" rx="105" ry="112" fill="#dceeff" opacity="0.55"/>
             <!-- Солнечное свечение -->
@@ -376,8 +263,7 @@
             <polygon points="98,204 105,196 112,204" fill="#c0392b" opacity="0.9"/>
             <rect x="116" y="206" width="12" height="16" fill="#d4845a" opacity="0.9"/>
             <polygon points="116,206 122,198 128,206" fill="#a93226" opacity="0.9"/>
-          </svg>
-        </div>
+          </svg></div>
 
         <!-- Стихи -->
         <blockquote class="excerpt__quote">
