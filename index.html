@@ -17,16 +17,87 @@
   <!-- ========== SCROLL DROPLET ========== -->
   <div class="sdrop-track" aria-hidden="true">
     <div class="sdrop" id="sdrop">
-      <div class="sdrop__body">💧</div>
+
+      <!-- пузырёк над головой -->
+      <div class="sdrop__bubble"></div>
+
+      <!-- SVG-персонаж Кап-Кап -->
+      <svg class="sdrop__svg" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="kkBody" cx="33%" cy="22%" r="72%">
+            <stop offset="0%"   stop-color="#ceeeff"/>
+            <stop offset="50%"  stop-color="#38bdf8" stop-opacity="0.92"/>
+            <stop offset="100%" stop-color="#0284c7" stop-opacity="0.88"/>
+          </radialGradient>
+          <radialGradient id="kkGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#7dd3fc" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Свечение под телом -->
+        <ellipse cx="40" cy="87" rx="26" ry="7" fill="url(#kkGlow)"/>
+
+        <!-- Тело-слеза -->
+        <path class="kk__body"
+          d="M40,4 C41,4 70,40 70,62 C70,79 56,91 40,91 C24,91 10,79 10,62 C10,40 39,4 40,4 Z"
+          fill="url(#kkBody)"/>
+
+        <!-- Блик (стеклянный эффект) -->
+        <ellipse cx="26" cy="34" rx="7" ry="14"
+          fill="white" opacity="0.28" transform="rotate(-18,26,34)"/>
+        <ellipse cx="31" cy="24" rx="3" ry="5"
+          fill="white" opacity="0.18" transform="rotate(-18,31,24)"/>
+
+        <!-- Глаза: спокойные -->
+        <g class="kk__eyes-normal">
+          <ellipse cx="29" cy="55" rx="7"   ry="8"   fill="#1a3558"/>
+          <ellipse cx="51" cy="55" rx="7"   ry="8"   fill="#1a3558"/>
+          <circle  cx="32" cy="51" r="2.4"           fill="white"/>
+          <circle  cx="54" cy="51" r="2.4"           fill="white"/>
+          <circle  cx="28" cy="57" r="1.2"           fill="#3b82f6" opacity="0.5"/>
+          <circle  cx="50" cy="57" r="1.2"           fill="#3b82f6" opacity="0.5"/>
+        </g>
+
+        <!-- Глаза: падение (смотрят вниз, широкие) -->
+        <g class="kk__eyes-fall">
+          <ellipse cx="29" cy="57" rx="7.5" ry="9"   fill="#1a3558"/>
+          <ellipse cx="51" cy="57" rx="7.5" ry="9"   fill="#1a3558"/>
+          <circle  cx="29" cy="61" r="2.8"           fill="white"/>
+          <circle  cx="51" cy="61" r="2.8"           fill="white"/>
+        </g>
+
+        <!-- Щёчки -->
+        <ellipse cx="17" cy="65" rx="7.5" ry="5.5" fill="#fb923c" opacity="0.58"/>
+        <ellipse cx="63" cy="65" rx="7.5" ry="5.5" fill="#fb923c" opacity="0.58"/>
+
+        <!-- Улыбка -->
+        <path d="M29,74 Q40,83 51,74"
+          stroke="#1a3558" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+
+      <!-- Шлейф движения -->
       <div class="sdrop__trail"></div>
+
+      <!-- Брызги при ударе (8 направлений) -->
+      <div class="sdrop__splash-wrap">
+        <div class="sdrop__sp sdrop__sp--0"></div>
+        <div class="sdrop__sp sdrop__sp--1"></div>
+        <div class="sdrop__sp sdrop__sp--2"></div>
+        <div class="sdrop__sp sdrop__sp--3"></div>
+        <div class="sdrop__sp sdrop__sp--4"></div>
+        <div class="sdrop__sp sdrop__sp--5"></div>
+        <div class="sdrop__sp sdrop__sp--6"></div>
+        <div class="sdrop__sp sdrop__sp--7"></div>
+      </div>
     </div>
+
+    <!-- Лужа -->
     <div class="sdrop-puddle" id="sdrop-puddle">
-      <div class="sdrop-puddle__ellipse"></div>
+      <div class="sdrop-puddle__body"></div>
       <div class="sdrop-puddle__ring sdrop-puddle__ring--1"></div>
       <div class="sdrop-puddle__ring sdrop-puddle__ring--2"></div>
       <div class="sdrop-puddle__ring sdrop-puddle__ring--3"></div>
-      <div class="sdrop-puddle__splash sdrop-puddle__splash--l"></div>
-      <div class="sdrop-puddle__splash sdrop-puddle__splash--r"></div>
     </div>
   </div>
 
