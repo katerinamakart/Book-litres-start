@@ -21,76 +21,8 @@
       <!-- пузырёк над головой -->
       <div class="sdrop__bubble"></div>
 
-      <!-- Персонаж Кап-Кап -->
+      <!-- Персонаж Кап-Кап — реальная картинка -->
       <img src="IMG_0915.png" alt="" class="sdrop__svg"/>
-      <svg style="display:none" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="kkBody" cx="33%" cy="22%" r="72%">
-            <stop offset="0%"   stop-color="#f0f9ff" stop-opacity="0.96"/>
-            <stop offset="42%"  stop-color="#c2e8f8" stop-opacity="0.84"/>
-            <stop offset="100%" stop-color="#60b8e0" stop-opacity="0.76"/>
-          </radialGradient>
-          <radialGradient id="kkEye" cx="32%" cy="28%" r="68%">
-            <stop offset="0%"   stop-color="#fde68a"/>
-            <stop offset="48%"  stop-color="#d97706"/>
-            <stop offset="100%" stop-color="#92400e"/>
-          </radialGradient>
-          <radialGradient id="kkGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stop-color="#7dd3fc" stop-opacity="0.55"/>
-            <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-
-        <!-- Свечение под телом -->
-        <ellipse cx="40" cy="87" rx="26" ry="7" fill="url(#kkGlow)"/>
-
-        <!-- Тело-слеза -->
-        <path class="kk__body"
-          d="M40,4 C41,4 70,40 70,62 C70,79 56,91 40,91 C24,91 10,79 10,62 C10,40 39,4 40,4 Z"
-          fill="url(#kkBody)" stroke="#90c8e4" stroke-width="1.2" stroke-opacity="0.5"/>
-
-        <!-- Блик (стеклянный эффект) -->
-        <ellipse cx="26" cy="34" rx="7" ry="14"
-          fill="white" opacity="0.32" transform="rotate(-18,26,34)"/>
-        <ellipse cx="31" cy="24" rx="3" ry="5"
-          fill="white" opacity="0.2" transform="rotate(-18,31,24)"/>
-
-        <!-- Глаза: спокойные — золотые -->
-        <g class="kk__eyes-normal">
-          <ellipse cx="29" cy="55" rx="7.5" ry="8"   fill="white" opacity="0.95"/>
-          <ellipse cx="29" cy="55" rx="6"   ry="6.5" fill="url(#kkEye)"/>
-          <ellipse cx="29" cy="55" rx="3.5" ry="4"   fill="#1c1a2e"/>
-          <circle  cx="31" cy="52" r="2"              fill="white"/>
-          <circle  cx="27" cy="57" r="1"              fill="white" opacity="0.6"/>
-
-          <ellipse cx="51" cy="55" rx="7.5" ry="8"   fill="white" opacity="0.95"/>
-          <ellipse cx="51" cy="55" rx="6"   ry="6.5" fill="url(#kkEye)"/>
-          <ellipse cx="51" cy="55" rx="3.5" ry="4"   fill="#1c1a2e"/>
-          <circle  cx="53" cy="52" r="2"              fill="white"/>
-          <circle  cx="49" cy="57" r="1"              fill="white" opacity="0.6"/>
-        </g>
-
-        <!-- Глаза: падение (широкие, смотрят вниз) -->
-        <g class="kk__eyes-fall">
-          <ellipse cx="29" cy="57" rx="7.5" ry="9"   fill="white" opacity="0.95"/>
-          <ellipse cx="29" cy="57" rx="6"   ry="7.5" fill="url(#kkEye)"/>
-          <ellipse cx="29" cy="59" rx="3.8" ry="4.5" fill="#1c1a2e"/>
-          <circle  cx="31" cy="57" r="2.2"            fill="white"/>
-
-          <ellipse cx="51" cy="57" rx="7.5" ry="9"   fill="white" opacity="0.95"/>
-          <ellipse cx="51" cy="57" rx="6"   ry="7.5" fill="url(#kkEye)"/>
-          <ellipse cx="51" cy="59" rx="3.8" ry="4.5" fill="#1c1a2e"/>
-          <circle  cx="53" cy="57" r="2.2"            fill="white"/>
-        </g>
-
-        <!-- Щёчки -->
-        <ellipse cx="17" cy="65" rx="7.5" ry="5.5" fill="#fb923c" opacity="0.52"/>
-        <ellipse cx="63" cy="65" rx="7.5" ry="5.5" fill="#fb923c" opacity="0.52"/>
-
-        <!-- Улыбка -->
-        <path d="M29,74 Q40,83 51,74"
-          stroke="#5a8fa8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      </svg>
 
       <!-- Шлейф движения -->
       <div class="sdrop__trail"></div>
