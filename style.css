@@ -650,10 +650,11 @@ body {
 
 /* ── Капелька-картинка ── */
 .sdrop__svg {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
   filter: drop-shadow(0 6px 14px rgba(14,165,233,0.55));
+  mix-blend-mode: multiply; /* убирает белый фон */
   transition: transform 0.18s ease;
   display: block;
 }
