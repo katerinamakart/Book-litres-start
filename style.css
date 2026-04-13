@@ -568,156 +568,192 @@ body {
 /* ===== SCROLL DROPLET ===== */
 .sdrop-track {
   position: fixed;
-  right: 22px;
+  right: 16px;
   top: 0;
-  width: 48px;
+  width: 80px;
   height: 100vh;
   pointer-events: none;
   z-index: 100;
 }
 
-/* The droplet */
 .sdrop {
   position: absolute;
   right: 0;
   top: 6vh;
-  width: 48px;
+  width: 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: top 0.08s linear;
+  transition: top 0.09s linear;
   will-change: top;
 }
 
-.sdrop__body {
-  font-size: 1.8rem;
-  line-height: 1;
-  transition: transform 0.15s ease;
-  filter: drop-shadow(0 4px 8px rgba(14,165,233,0.5));
+/* ── Bubble above head ── */
+.sdrop__bubble {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e0f2fe, #7dd3fc 65%, #38bdf8);
+  box-shadow: 0 0 7px rgba(14,165,233,0.4);
+  opacity: 0.85;
+  margin-bottom: 4px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-/* Trail — visible while falling */
+/* ── SVG character ── */
+.sdrop__svg {
+  width: 64px;
+  height: auto;
+  filter: drop-shadow(0 5px 12px rgba(14,165,233,0.5));
+  transition: transform 0.18s ease;
+}
+
+/* Eye visibility */
+.kk__eyes-fall   { opacity: 0; transition: opacity 0.1s; }
+.kk__eyes-normal { opacity: 1; transition: opacity 0.1s; }
+
+/* ── Motion trail ── */
 .sdrop__trail {
-  width: 3px;
+  width: 4px;
   height: 0;
-  background: linear-gradient(to bottom, rgba(14,165,233,0.55), transparent);
+  background: linear-gradient(to bottom, rgba(56,189,248,0.65), transparent);
   border-radius: 2px;
-  margin-top: -2px;
+  margin-top: 2px;
   transition: height 0.12s ease;
 }
 
-/* ── Falling state ── */
-.sdrop--falling .sdrop__body {
-  transform: scaleY(1.35) scaleX(0.78);
-  filter: drop-shadow(0 6px 12px rgba(14,165,233,0.6));
-}
-.sdrop--falling .sdrop__trail {
-  height: 28px;
-}
-
-/* ── Paused / floating in air ── */
-.sdrop--paused .sdrop__body {
-  transform: scaleY(1) scaleX(1);
-  animation: sdropFloat 1.6s ease-in-out infinite;
-}
-.sdrop--paused .sdrop__trail {
+/* ── Splash drops (8 pcs) ── */
+.sdrop__splash-wrap {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
   height: 0;
 }
-@keyframes sdropFloat {
-  0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
-  30%     { transform: translateY(-5px) rotate(3deg) scale(1.05); }
-  60%     { transform: translateY(-2px) rotate(-2deg) scale(0.97); }
+.sdrop__sp {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  background: linear-gradient(to bottom, #bae6fd, #0ea5e9);
+  border-radius: 50% 50% 40% 40%;
+  left: -3.5px;
+  bottom: 0;
+  opacity: 0;
 }
 
-/* ── Splash state ── */
-.sdrop--splash .sdrop__body {
-  animation: sdropSplash 0.32s ease-out forwards;
-}
-@keyframes sdropSplash {
-  0%   { transform: scaleY(1.3) scaleX(0.8); opacity: 1; }
-  40%  { transform: scaleY(0.25) scaleX(1.7); opacity: 1; }
-  100% { transform: scaleY(0) scaleX(2); opacity: 0; }
-}
-.sdrop--hidden { opacity: 0; pointer-events: none; }
+/* ── FALLING ── */
+.sdrop--falling .sdrop__svg     { transform: scaleY(1.25) scaleX(0.82); }
+.sdrop--falling .kk__eyes-normal{ opacity: 0; }
+.sdrop--falling .kk__eyes-fall  { opacity: 1; }
+.sdrop--falling .sdrop__trail   { height: 32px; }
+.sdrop--falling .sdrop__bubble  { transform: scaleY(0.65) scaleX(0.85); opacity: 0.5; }
 
-/* ── Puddle ── */
+/* ── PAUSED — floating in air ── */
+.sdrop--paused .sdrop__svg {
+  animation: kkFloat 1.9s ease-in-out infinite;
+}
+.sdrop--paused .sdrop__bubble {
+  animation: bubFloat 1.9s ease-in-out infinite;
+}
+.sdrop--paused .sdrop__trail { height: 0; }
+
+@keyframes kkFloat {
+  0%,100% { transform: translateY(0)    rotate(-3deg) scaleX(1)    scaleY(1); }
+  35%     { transform: translateY(-7px) rotate( 3deg) scaleX(1.03) scaleY(0.97); }
+  65%     { transform: translateY(-3px) rotate(-1deg) scaleX(0.98) scaleY(1.02); }
+}
+@keyframes bubFloat {
+  0%,100% { transform: translateY(0); }
+  35%     { transform: translateY(-9px); }
+  65%     { transform: translateY(-4px); }
+}
+
+/* ── SPLASH ── */
+.sdrop--splash .sdrop__svg {
+  animation: kkSplash 0.36s ease-out forwards;
+}
+.sdrop--splash .sdrop__bubble {
+  animation: bubFade 0.2s ease-out forwards;
+}
+.sdrop--splash .sdrop__trail { height: 0; }
+
+@keyframes kkSplash {
+  0%   { transform: scaleY(1.2)  scaleX(0.84); opacity: 1; }
+  35%  { transform: scaleY(0.22) scaleX(1.65); opacity: 1; }
+  100% { transform: scaleY(0)    scaleX(1.9);  opacity: 0; }
+}
+@keyframes bubFade {
+  to { opacity: 0; transform: translateY(-14px) scale(0.4); }
+}
+
+/* 8 splash drops fan */
+.sdrop--splash .sdrop__sp { animation: spFly 0.7s ease-out forwards; }
+
+@keyframes spFly {
+  0%   { opacity: 1; transform: translate(var(--dx0), 0)           rotate(var(--r)); }
+  100% { opacity: 0; transform: translate(var(--dx1), var(--dy1))  rotate(var(--r)); }
+}
+.sdrop__sp--0 { --dx0:   0px; --dx1:   0px; --dy1: -58px; --r:   0deg; animation-delay: 0.00s; }
+.sdrop__sp--1 { --dx0:   0px; --dx1:  20px; --dy1: -54px; --r:  20deg; animation-delay: 0.02s; }
+.sdrop__sp--2 { --dx0:   0px; --dx1:  40px; --dy1: -40px; --r:  40deg; animation-delay: 0.03s; }
+.sdrop__sp--3 { --dx0:   0px; --dx1:  54px; --dy1: -18px; --r:  58deg; animation-delay: 0.04s; }
+.sdrop__sp--4 { --dx0:   0px; --dx1: -20px; --dy1: -54px; --r: -20deg; animation-delay: 0.02s; }
+.sdrop__sp--5 { --dx0:   0px; --dx1: -40px; --dy1: -40px; --r: -40deg; animation-delay: 0.03s; }
+.sdrop__sp--6 { --dx0:   0px; --dx1: -54px; --dy1: -18px; --r: -58deg; animation-delay: 0.04s; }
+.sdrop__sp--7 { --dx0:   0px; --dx1:  10px; --dy1: -60px; --r:  10deg; animation-delay: 0.01s; }
+
+/* ── HIDDEN ── */
+.sdrop--hidden { opacity: 0; }
+
+/* ── PUDDLE ── */
 .sdrop-puddle {
   position: absolute;
-  bottom: 8vh;
-  right: -8px;
-  width: 64px;
+  bottom: 9vh;
+  right: -18px;
+  width: 116px;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 0.25s ease;
 }
 .sdrop-puddle--active { opacity: 1; }
 
-.sdrop-puddle__ellipse {
-  width: 40px;
-  height: 14px;
-  background: radial-gradient(ellipse, rgba(14,165,233,0.55) 0%, rgba(14,165,233,0.15) 70%, transparent 100%);
+.sdrop-puddle__body {
+  width: 72px;
+  height: 26px;
+  background: radial-gradient(ellipse at center,
+    rgba(14,165,233,0.72) 0%,
+    rgba(56,189,248,0.45) 45%,
+    rgba(125,211,252,0.2) 70%,
+    transparent 100%);
   border-radius: 50%;
-  margin-bottom: -4px;
 }
 
-/* Expanding ripple rings */
 .sdrop-puddle__ring {
   position: absolute;
-  bottom: 2px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%) scaleY(0.35);
-  border: 1.5px solid rgba(14,165,233,0.5);
+  border: 1.8px solid rgba(14,165,233,0.55);
   border-radius: 50%;
-  width: 10px;
-  height: 10px;
   opacity: 0;
+  transform: translate(-50%, -50%) scaleY(0.32);
 }
-.sdrop-puddle--active .sdrop-puddle__ring {
-  animation: puddle-ring 1.2s ease-out forwards;
-}
-.sdrop-puddle--active .sdrop-puddle__ring--1 { animation-delay: 0.05s; }
-.sdrop-puddle--active .sdrop-puddle__ring--2 { animation-delay: 0.25s; }
-.sdrop-puddle--active .sdrop-puddle__ring--3 { animation-delay: 0.45s; }
+.sdrop-puddle--active .sdrop-puddle__ring { animation: puddleRing 1.5s ease-out forwards; }
+.sdrop-puddle--active .sdrop-puddle__ring--1 { animation-delay: 0.04s; }
+.sdrop-puddle--active .sdrop-puddle__ring--2 { animation-delay: 0.30s; }
+.sdrop-puddle--active .sdrop-puddle__ring--3 { animation-delay: 0.56s; }
 
-@keyframes puddle-ring {
-  0%   { width: 8px; height: 8px; opacity: 0.8; }
-  100% { width: 52px; height: 52px; opacity: 0; }
-}
-
-/* Upward splash droplets */
-.sdrop-puddle__splash {
-  position: absolute;
-  bottom: 12px;
-  width: 4px;
-  height: 10px;
-  background: rgba(14,165,233,0.7);
-  border-radius: 50% 50% 40% 40%;
-  opacity: 0;
-}
-.sdrop-puddle__splash--l { left: 12px; }
-.sdrop-puddle__splash--r { right: 12px; }
-.sdrop-puddle--active .sdrop-puddle__splash--l {
-  animation: splash-left 0.5s ease-out 0.05s forwards;
-}
-.sdrop-puddle--active .sdrop-puddle__splash--r {
-  animation: splash-right 0.5s ease-out 0.05s forwards;
-}
-@keyframes splash-left {
-  0%   { transform: translate(0, 0) rotate(-20deg); opacity: 1; }
-  100% { transform: translate(-10px, -18px) rotate(-50deg); opacity: 0; }
-}
-@keyframes splash-right {
-  0%   { transform: translate(0, 0) rotate(20deg); opacity: 1; }
-  100% { transform: translate(10px, -18px) rotate(50deg); opacity: 0; }
+@keyframes puddleRing {
+  0%   { width: 10px;  height: 10px;  opacity: 0.95; }
+  100% { width: 100px; height: 100px; opacity: 0;    }
 }
 
-/* Hide on very small screens */
 @media (max-width: 480px) {
-  .sdrop-track { right: 8px; }
-  .sdrop__body { font-size: 1.3rem; }
+  .sdrop-track  { right: 4px; width: 58px; }
+  .sdrop__svg   { width: 46px; }
+  .sdrop__bubble{ width: 9px; height: 9px; }
 }
 
 /* ===== RESPONSIVE ===== */
