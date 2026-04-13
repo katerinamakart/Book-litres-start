@@ -648,17 +648,18 @@ body {
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-/* ── SVG character ── */
+/* ── Капелька-картинка ── */
 .sdrop__svg {
-  width: 64px;
-  height: auto;
-  filter: drop-shadow(0 5px 12px rgba(14,165,233,0.5));
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(14,165,233,0.55));
   transition: transform 0.18s ease;
+  display: block;
 }
 
 /* Eye visibility */
-.kk__eyes-fall   { opacity: 0; transition: opacity 0.1s; }
-.kk__eyes-normal { opacity: 1; transition: opacity 0.1s; }
+/* img replaces SVG — eye toggles no longer needed */
 
 /* ── Motion trail ── */
 .sdrop__trail {
@@ -691,8 +692,6 @@ body {
 
 /* ── FALLING ── */
 .sdrop--falling .sdrop__svg     { transform: scaleY(1.25) scaleX(0.82); }
-.sdrop--falling .kk__eyes-normal{ opacity: 0; }
-.sdrop--falling .kk__eyes-fall  { opacity: 1; }
 .sdrop--falling .sdrop__trail   { height: 32px; }
 .sdrop--falling .sdrop__bubble  { transform: scaleY(0.65) scaleX(0.85); opacity: 0.5; }
 
