@@ -62,49 +62,88 @@
 
     <div class="hero__inner">
 
-      <!-- Book cover -->
-      <div class="hero__cover">
-        <div class="book">
-          <div class="book__spine"></div>
-          <div class="book__front">
-            <div class="book__illustration">
-              <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
-              <div class="book__cover-title">
-                <span class="book__title-main">Путешествие</span>
-                <span class="book__title-sub">Кап-Кап</span>
-                <span class="book__title-author">Екатерина Макарова</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="book__shadow"></div>
-      </div>
-
-      <!-- Hero text -->
-      <div class="hero__text">
+      <!-- Заголовок -->
+      <div class="hero__headline">
         <span class="hero__badge">Детская книга · 2026</span>
         <h1 class="hero__title">
-          Путешествие<br>
-          <em>Кап-Кап</em>
+          Путешествие <em>Кап-Кап</em>
         </h1>
         <p class="hero__subtitle">
-          Добрая история о том, как маленькая капелька<br>
-          путешествует по всему миру
+          Добрая история о том, как маленькая капелька путешествует по всему миру
         </p>
         <div class="hero__meta">
           <span class="hero__meta-item">👶 от 3 лет</span>
           <span class="hero__meta-item">📖 Стихи + опыты</span>
           <span class="hero__meta-item">🎨 Акварель</span>
         </div>
-        <div class="hero__buttons">
-          <a href="#buy" class="btn btn--primary">
-            <span class="btn__icon">💧</span>
-            Купить на ЛитРес
+      </div>
+
+      <!-- Книги: обложка + разворот -->
+      <div class="hero__books">
+
+        <!-- Обложка (крупнее) -->
+        <div class="hero__cover">
+          <div class="book">
+            <div class="book__spine"></div>
+            <div class="book__front">
+              <div class="book__illustration">
+                <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
+                <div class="book__cover-title">
+                  <span class="book__title-main">Путешествие</span>
+                  <span class="book__title-sub">Кап-Кап</span>
+                  <span class="book__title-author">Екатерина Макарова</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="book__shadow"></div>
+        </div>
+
+        <!-- Разворот книги -->
+        <div class="hero__spread">
+          <div class="spread">
+            <!-- Левая страница — иллюстрация -->
+            <div class="spread__page spread__left">
+              <img src="IMG_0922.jpeg" alt="" class="spread__img"/>
+            </div>
+            <!-- Корешок -->
+            <div class="spread__spine"></div>
+            <!-- Правая страница — текст -->
+            <div class="spread__page spread__right">
+              <div class="spread__deco">✦</div>
+              <p class="spread__poem">
+                — Кап! — упала<br>я с листочка,<br>
+                Покатилась,<br>как клубочек.<br>
+                В ручеёк нырнула —<br><em>плюх!</em><br>
+                Закружился<br>тихий пух.
+              </p>
+              <div class="spread__deco spread__deco--bottom">💧</div>
+            </div>
+          </div>
+          <div class="spread__shadow"></div>
+        </div>
+
+      </div>
+
+      <!-- Кнопки покупки прямо под книгами -->
+      <div class="hero__cta-block">
+        <div class="hero__cta-buttons">
+          <a href="#" class="btn btn--buy-digital">
+            <span class="btn__icon">📱</span>
+            <span>
+              <strong>Электронная книга</strong>
+              <small>Читать сразу · ЛитРес</small>
+            </span>
           </a>
-          <a href="#about" class="btn btn--ghost">
-            Узнать больше
+          <a href="#" class="btn btn--buy-print">
+            <span class="btn__icon">📚</span>
+            <span>
+              <strong>Печатная книга</strong>
+              <small>С доставкой · ЛитРес</small>
+            </span>
           </a>
         </div>
+        <p class="hero__cta-note">Ссылки появятся при выходе книги в продажу</p>
       </div>
 
     </div>
@@ -325,51 +364,6 @@
           «Путешествие Кап-Кап» — история, выросшая из настоящего детского вопроса:
           <em>«Мама, а откуда берётся дождик?»</em>
         </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Wave -->
-  <div class="wave-divider" style="background:#f0f9ff">
-    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,50 C360,10 1080,70 1440,30 L1440,80 L0,80 Z" fill="#e0f2fe"/>
-    </svg>
-  </div>
-
-  <!-- ========== BUY ========== -->
-  <section class="buy" id="buy">
-    <div class="buy__inner">
-      <div class="buy__kapkap reveal" aria-hidden="true">💧</div>
-      <h2 class="buy__title reveal">Подарите ребёнку<br><em>путешествие</em></h2>
-      <p class="buy__subtitle reveal">
-        Доступна в электронном и печатном форматах.<br>
-        Открывается на любом устройстве — в любое время.
-      </p>
-
-      <div class="buy__buttons reveal">
-        <a href="#" class="btn btn--buy-digital">
-          <span class="btn__icon">📱</span>
-          <span>
-            <strong>Электронная книга</strong>
-            <small>Читать сразу · ЛитРес</small>
-          </span>
-        </a>
-        <a href="#" class="btn btn--buy-print">
-          <span class="btn__icon">📚</span>
-          <span>
-            <strong>Печатная книга</strong>
-            <small>С доставкой · ЛитРес</small>
-          </span>
-        </a>
-      </div>
-
-      <p class="buy__note reveal">Ссылки появятся при выходе книги в продажу</p>
-
-      <!-- Water ripple decoration -->
-      <div class="ripple-wrap" aria-hidden="true">
-        <div class="ripple"></div>
-        <div class="ripple ripple--2"></div>
-        <div class="ripple ripple--3"></div>
       </div>
     </div>
   </section>
