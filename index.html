@@ -62,12 +62,10 @@
 
     <div class="hero__inner">
 
-      <!-- Заголовок -->
-      <div class="hero__headline">
+      <!-- Текст + кнопки (левая колонка) -->
+      <div class="hero__content">
         <span class="hero__badge">Детская книга · 2026</span>
-        <h1 class="hero__title">
-          Путешествие <em>Кап-Кап</em>
-        </h1>
+        <h1 class="hero__title">Путешествие <em>Кап-Кап</em></h1>
         <p class="hero__subtitle">
           Добрая история о том, как маленькая капелька путешествует по всему миру
         </p>
@@ -76,57 +74,6 @@
           <span class="hero__meta-item">📖 Стихи + опыты</span>
           <span class="hero__meta-item">🎨 Акварель</span>
         </div>
-      </div>
-
-      <!-- Книги: обложка + разворот -->
-      <div class="hero__books">
-
-        <!-- Обложка (крупнее) -->
-        <div class="hero__cover">
-          <div class="book">
-            <div class="book__spine"></div>
-            <div class="book__front">
-              <div class="book__illustration">
-                <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
-                <div class="book__cover-title">
-                  <span class="book__title-main">Путешествие</span>
-                  <span class="book__title-sub">Кап-Кап</span>
-                  <span class="book__title-author">Екатерина Макарова</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="book__shadow"></div>
-        </div>
-
-        <!-- Разворот книги -->
-        <div class="hero__spread">
-          <div class="spread">
-            <!-- Левая страница — иллюстрация -->
-            <div class="spread__page spread__left">
-              <img src="IMG_0922.jpeg" alt="" class="spread__img"/>
-            </div>
-            <!-- Корешок -->
-            <div class="spread__spine"></div>
-            <!-- Правая страница — текст -->
-            <div class="spread__page spread__right">
-              <div class="spread__deco">✦</div>
-              <p class="spread__poem">
-                — Кап! — упала<br>я с листочка,<br>
-                Покатилась,<br>как клубочек.<br>
-                В ручеёк нырнула —<br><em>плюх!</em><br>
-                Закружился<br>тихий пух.
-              </p>
-              <div class="spread__deco spread__deco--bottom">💧</div>
-            </div>
-          </div>
-          <div class="spread__shadow"></div>
-        </div>
-
-      </div>
-
-      <!-- Кнопки покупки прямо под книгами -->
-      <div class="hero__cta-block">
         <div class="hero__cta-buttons">
           <a href="#" class="btn btn--buy-digital">
             <span class="btn__icon">📱</span>
@@ -144,6 +91,48 @@
           </a>
         </div>
         <p class="hero__cta-note">Ссылки появятся при выходе книги в продажу</p>
+      </div>
+
+      <!-- Книжная сцена (правая колонка) -->
+      <div class="hero__scene">
+
+        <!-- Обложка стоит (задний план) -->
+        <div class="scene__cover">
+          <div class="book">
+            <div class="book__spine"></div>
+            <div class="book__front">
+              <div class="book__illustration">
+                <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
+                <div class="book__cover-title">
+                  <span class="book__title-main">Путешествие</span>
+                  <span class="book__title-sub">Кап-Кап</span>
+                  <span class="book__title-author">Екатерина Макарова</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Разворот лежит на столе (передний план) -->
+        <div class="scene__spread">
+          <div class="spread">
+            <div class="spread__page spread__left">
+              <img src="IMG_0922.jpeg" alt="" class="spread__img"/>
+            </div>
+            <div class="spread__spine"></div>
+            <div class="spread__page spread__right">
+              <div class="spread__deco">✦</div>
+              <p class="spread__poem">
+                — Кап! — упала<br>я с листочка,<br>
+                Покатилась,<br>как клубочек.<br>
+                В ручеёк нырнула —<br><em>плюх!</em><br>
+                Закружился<br>тихий пух.
+              </p>
+              <div class="spread__deco spread__deco--bottom">💧</div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
