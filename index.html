@@ -1,90 +1,494 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Путешествие Капельки</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Путешествие Кап-Кап — детская книга Екатерины Макаровой</title>
+  <meta name="description" content="«Путешествие Кап-Кап» — добрая история о круговороте воды. Ритмичные стихи, акварельные иллюстрации и простые опыты для детей от 3 лет." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
-
 <body>
 
-<div class="rain" id="rain"></div>
+  <!-- Custom cursor -->
+  <div class="cursor" id="cursor">💧</div>
 
-<header>
-<h1>💧 Путешествие Капельки</h1>
-<p>Добрая детская книга о круговороте воды</p>
-</header>
+  <!-- ========== SCROLL DROPLET ========== -->
+  <div class="sdrop-track" aria-hidden="true">
+    <div class="sdrop" id="sdrop">
 
-<section class="hero">
+      <!-- пузырёк над головой -->
+      <div class="sdrop__bubble"></div>
 
-<div class="hero-text">
-<h2>История маленькой капельки</h2>
+      <!-- Персонаж Кап-Кап — реальная картинка -->
+      <img src="Kamel.png" alt="" class="sdrop__svg"/>
 
-<p>
-Капелька отправляется в удивительное путешествие —
-она становится облаком, снежинкой и дождиком,
-и снова встречает своего друга мальчика.
-</p>
+      <!-- Шлейф движения -->
+      <div class="sdrop__trail"></div>
 
-<a class="button" href="#about">О книге</a>
+      <!-- Брызги при ударе (8 направлений) -->
+      <div class="sdrop__splash-wrap">
+        <div class="sdrop__sp sdrop__sp--0"></div>
+        <div class="sdrop__sp sdrop__sp--1"></div>
+        <div class="sdrop__sp sdrop__sp--2"></div>
+        <div class="sdrop__sp sdrop__sp--3"></div>
+        <div class="sdrop__sp sdrop__sp--4"></div>
+        <div class="sdrop__sp sdrop__sp--5"></div>
+        <div class="sdrop__sp sdrop__sp--6"></div>
+        <div class="sdrop__sp sdrop__sp--7"></div>
+      </div>
+    </div>
 
-</div>
+    <!-- Лужа -->
+    <div class="sdrop-puddle" id="sdrop-puddle">
+      <div class="sdrop-puddle__body"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--1"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--2"></div>
+      <div class="sdrop-puddle__ring sdrop-puddle__ring--3"></div>
+    </div>
+  </div>
 
-<div class="hero-image">
-<img src="book-cover.png">
-</div>
+  <!-- ========== HERO ========== -->
+  <header class="hero" id="hero">
 
-</section>
+    <!-- Rain drops -->
+    <div class="rain" aria-hidden="true" id="rain"></div>
 
-<section id="about" class="about fade">
+    <!-- Clouds -->
+    <div class="cloud cloud--1" aria-hidden="true"></div>
+    <div class="cloud cloud--2" aria-hidden="true"></div>
+    <div class="cloud cloud--3" aria-hidden="true"></div>
 
-<h2>О книге</h2>
+    <div class="hero__inner">
 
-<p>
-Книга помогает детям понять круговорот воды в природе
-через сказочное путешествие капельки.
-</p>
+      <!-- Текст + кнопки (левая колонка) -->
+      <div class="hero__content">
+        <span class="hero__badge">Детская книга · 2026</span>
+        <h1 class="hero__title">Путешествие <em>Кап-Кап</em></h1>
+        <p class="hero__subtitle">
+          Добрая история о том, как маленькая капелька путешествует по всему миру
+        </p>
+        <div class="hero__meta">
+          <span class="hero__meta-item">👶 от 3 лет</span>
+          <span class="hero__meta-item">📖 Стихи + опыты</span>
+          <span class="hero__meta-item">🎨 Акварель</span>
+        </div>
+        <div class="hero__cta-buttons">
+          <a href="#" class="btn btn--buy-digital">
+            <span class="btn__icon">📱</span>
+            <span>
+              <strong>Электронная книга</strong>
+              <small>Читать сразу · ЛитРес</small>
+            </span>
+          </a>
+          <a href="#" class="btn btn--buy-print">
+            <span class="btn__icon">📚</span>
+            <span>
+              <strong>Печатная книга</strong>
+              <small>С доставкой · ЛитРес</small>
+            </span>
+          </a>
+        </div>
+        <p class="hero__cta-note">Ссылки появятся при выходе книги в продажу</p>
+      </div>
 
-</section>
+      <!-- Книжная сцена (правая колонка) -->
+      <div class="hero__scene">
 
-<section class="features fade">
+        <!-- Обложка стоит (задний план) -->
+        <div class="scene__cover">
+          <div class="book">
+            <div class="book__spine"></div>
+            <div class="book__front">
+              <div class="book__illustration">
+                <img src="IMG_0921.jpeg" alt="Кап-Кап" class="book__cover-img"/>
+                <div class="book__cover-title">
+                  <span class="book__title-main">Путешествие</span>
+                  <span class="book__title-sub">Кап-Кап</span>
+                  <span class="book__title-author">Екатерина Макарова</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-<div class="card">
-🌧️
-<h3>Дождь</h3>
-<p>Как появляются капли дождя</p>
-</div>
+        <!-- Разворот лежит на столе (передний план) -->
+        <div class="scene__spread">
+          <div class="spread">
+            <div class="spread__page spread__left">
+              <img src="IMG_0922.jpeg" alt="" class="spread__img"/>
+            </div>
+            <div class="spread__spine"></div>
+            <div class="spread__page spread__right">
+              <div class="spread__deco">✦</div>
+              <p class="spread__poem">
+                — Кап! — упала<br>я с листочка,<br>
+                Покатилась,<br>как клубочек.<br>
+                В ручеёк нырнула —<br><em>плюх!</em><br>
+                Закружился<br>тихий пух.
+              </p>
+              <div class="spread__deco spread__deco--bottom">💧</div>
+            </div>
+          </div>
+        </div>
 
-<div class="card">
-❄️
-<h3>Снег</h3>
-<p>Как капелька превращается в снежинку</p>
-</div>
+      </div>
 
-<div class="card">
-☁️
-<h3>Облака</h3>
-<p>Путешествие воды по небу</p>
-</div>
+    </div>
 
-</section>
+    <!-- Scroll hint -->
+    <div class="hero__scroll" aria-hidden="true">
+      <span>Листай вниз</span>
+      <div class="hero__scroll-drop">💧</div>
+    </div>
+  </header>
 
-<section class="buy fade">
+  <!-- Wave -->
+  <div class="wave-divider">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,10 1440,40 L1440,80 L0,80 Z" fill="#f0f9ff"/>
+    </svg>
+  </div>
 
-<h2>Читать книгу</h2>
+  <!-- ========== EXCERPT ========== -->
+  <section class="excerpt" id="excerpt">
+    <div class="snow" aria-hidden="true" id="snow"></div>
+    <div class="excerpt__inner">
+      <div class="excerpt__label">✦ Отрывок из книги ✦</div>
 
-<a class="button big" href="#">
-Открыть на LitRes
-</a>
+      <div class="excerpt__layout">
 
-</section>
+        <!-- Иллюстрация: Кап-Кап на облаке -->
+        <div class="excerpt__illo">
+          <img src="IMG_0922.jpeg" alt="Кап-Кап на облаке" class="excerpt__illo-svg"/>
+        </div>
+        <div style="display:none"><svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" class="excerpt__illo-svg--old">
+            <!-- Фон-овал -->
+            <ellipse cx="110" cy="120" rx="105" ry="112" fill="#dceeff" opacity="0.55"/>
+            <!-- Солнечное свечение -->
+            <ellipse cx="58" cy="44" rx="46" ry="40" fill="#fff7cc" opacity="0.7"/>
+            <circle  cx="52" cy="38" r="22" fill="#ffe066" opacity="0.85"/>
+            <circle  cx="52" cy="38" r="15" fill="#ffd43b"/>
 
-<footer>
-<p>© 2026 Katerina Makarova</p>
-</footer>
+            <!-- Персонаж — тело -->
+            <path d="M110,38 C111,38 140,74 140,96 C140,114 126,126 110,126 C94,126 80,114 80,96 C80,74 109,38 110,38 Z"
+                  fill="#5bb8d4"/>
+            <!-- Блик -->
+            <ellipse cx="97" cy="62" rx="8" ry="14"
+                     fill="white" opacity="0.38" transform="rotate(-16,97,62)"/>
+            <ellipse cx="102" cy="50" rx="4" ry="6"
+                     fill="white" opacity="0.24" transform="rotate(-16,102,50)"/>
 
-<script src="script.js"></script>
+            <!-- Левый глаз -->
+            <circle cx="98"  cy="93"  r="10"  fill="white"/>
+            <circle cx="98"  cy="93"  r="8"   fill="#1a4a8c"/>
+            <circle cx="98"  cy="93"  r="4.5" fill="#0a1e40"/>
+            <circle cx="101" cy="89"  r="2.8" fill="white"/>
+
+            <!-- Правый глаз -->
+            <circle cx="122" cy="93"  r="10"  fill="white"/>
+            <circle cx="122" cy="93"  r="8"   fill="#1a4a8c"/>
+            <circle cx="122" cy="93"  r="4.5" fill="#0a1e40"/>
+            <circle cx="125" cy="89"  r="2.8" fill="white"/>
+
+            <!-- Щёчки -->
+            <ellipse cx="83"  cy="104" rx="9" ry="6" fill="#fb923c" opacity="0.65"/>
+            <ellipse cx="137" cy="104" rx="9" ry="6" fill="#fb923c" opacity="0.65"/>
+
+            <!-- Улыбка -->
+            <path d="M96,114 Q110,123 124,114"
+                  stroke="#1a4a8c" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+
+            <!-- Ручки сложены -->
+            <ellipse cx="72"  cy="108" rx="13" ry="8" fill="#5bb8d4" transform="rotate(30,72,108)"/>
+            <ellipse cx="148" cy="108" rx="13" ry="8" fill="#5bb8d4" transform="rotate(-30,148,108)"/>
+
+            <!-- Облако -->
+            <ellipse cx="110" cy="152" rx="70" ry="24" fill="white"/>
+            <ellipse cx="78"  cy="140" rx="38" ry="26" fill="white"/>
+            <ellipse cx="110" cy="138" rx="46" ry="28" fill="white"/>
+            <ellipse cx="142" cy="140" rx="36" ry="24" fill="white"/>
+            <rect x="40" y="150" width="140" height="26" fill="white"/>
+
+            <!-- Земля внизу -->
+            <ellipse cx="110" cy="218" rx="105" ry="20" fill="#68bb8e" opacity="0.55"/>
+            <!-- Деревья -->
+            <ellipse cx="32"  cy="208" rx="18" ry="20" fill="#4caf7d" opacity="0.8"/>
+            <ellipse cx="58"  cy="214" rx="15" ry="16" fill="#3a9a6a" opacity="0.8"/>
+            <ellipse cx="168" cy="206" rx="20" ry="22" fill="#4caf7d" opacity="0.8"/>
+            <ellipse cx="192" cy="212" rx="15" ry="16" fill="#3a9a6a" opacity="0.8"/>
+            <!-- Домики -->
+            <rect x="98"  y="204" width="14" height="18" fill="#e8a87c" opacity="0.9"/>
+            <polygon points="98,204 105,196 112,204" fill="#c0392b" opacity="0.9"/>
+            <rect x="116" y="206" width="12" height="16" fill="#d4845a" opacity="0.9"/>
+            <polygon points="116,206 122,198 128,206" fill="#a93226" opacity="0.9"/>
+          </svg></div>
+
+        <!-- Стихи -->
+        <blockquote class="excerpt__quote">
+          <p>— Кап! — упала я с листочка,<br>
+          Покатилась, как клубочек.<br>
+          В ручеёк нырнула — плюх!<br>
+          Закружился тихий пух.</p>
+
+          <p>Стала речкой, стала морем,<br>
+          Поднялась над синим бором.<br>
+          Стала тучкой, стала снегом —<br>
+          И вернулась тихим смехом.</p>
+        </blockquote>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave -->
+  <div class="wave-divider wave-divider--flip">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,0 480,80 720,40 C960,0 1200,70 1440,30 L1440,80 L0,80 Z" fill="#ffffff"/>
+    </svg>
+  </div>
+
+  <!-- ========== ABOUT ========== -->
+  <section class="about" id="about">
+    <div class="about__inner">
+
+      <div class="about__text reveal">
+        <span class="section__label">О книге</span>
+        <h2 class="section__title">Наука через <em>сказку</em></h2>
+        <p>
+          Вместе с капелькой <strong>Кап-Кап</strong> ребёнок узнает,
+          как вода путешествует по кругу: становится дождём, снегом,
+          росой и паром — и снова возвращается на небо.
+        </p>
+        <p>
+          История написана <strong>ритмичными стихами</strong> — их легко
+          читать вслух, хлопать в такт и повторять вместе с малышом.
+          Каждый разворот — новое приключение Кап-Кап и новое открытие.
+        </p>
+        <div class="about__tags">
+          <span class="tag">💧 Круговорот воды</span>
+          <span class="tag">🌧️ Дождь и снег</span>
+          <span class="tag">🌊 Реки и моря</span>
+          <span class="tag">☁️ Облака и пар</span>
+        </div>
+      </div>
+
+      <div class="about__features reveal" style="transition-delay:0.15s">
+        <div class="feature-card">
+          <span class="feature-card__icon">🎵</span>
+          <div>
+            <strong>Ритмичные стихи</strong>
+            <p>С хлопками и звуками — идеально для чтения вслух</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-card__icon">🎨</span>
+          <div>
+            <strong>Акварельные иллюстрации</strong>
+            <p>Нежные, подробные — на каждой странице</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-card__icon">🧪</span>
+          <div>
+            <strong>Опыты с водой</strong>
+            <p>Простые эксперименты для детей и родителей</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-card__icon">🔬</span>
+          <div>
+            <strong>«Знаешь ли ты?»</strong>
+            <p>Блок с наукой — простыми детскими словами</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== FOR WHOM ========== -->
+  <section class="for-whom">
+    <div class="for-whom__inner">
+      <div class="for-whom__header reveal">
+        <span class="section__label">Для кого</span>
+        <h2 class="section__title">Книга, которую <em>полюбят все</em></h2>
+      </div>
+
+      <div class="for-whom__grid">
+        <div class="audience-card reveal">
+          <div class="audience-card__icon">🧒</div>
+          <h3>Малышам от 3 лет</h3>
+          <p>Короткие ритмичные строфы, крупный текст и яркие акварельные картинки — идеально для первого знакомства с книгой.</p>
+        </div>
+        <div class="audience-card reveal" style="transition-delay:0.15s">
+          <div class="audience-card__icon">👩‍👧‍👦</div>
+          <h3>Родителям</h3>
+          <p>Опыты и блок «Знаешь ли ты?» дают повод для живого разговора о природе. Читать вместе — вдвойне интереснее.</p>
+        </div>
+        <div class="audience-card reveal" style="transition-delay:0.3s">
+          <div class="audience-card__icon">🎁</div>
+          <h3>В подарок</h3>
+          <p>Красивое оформление, добрый сюжет и польза — идеальный подарок на день рождения или первый книжный праздник.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== AUTHOR ========== -->
+  <section class="author" id="author">
+    <div class="author__inner reveal">
+      <div class="author__avatar" aria-label="Автор">
+        <div class="author__avatar-circle">
+          <span>ЕМ</span>
+        </div>
+      </div>
+      <div class="author__text">
+        <span class="section__label">Об авторе</span>
+        <h2 class="author__name">Екатерина Макарова</h2>
+        <p>
+          Автор детских книг о природе и науке. Пишет так, чтобы даже
+          самые сложные вещи становились понятными и интересными для малышей.
+          «Путешествие Кап-Кап» — история, выросшая из настоящего детского вопроса:
+          <em>«Мама, а откуда берётся дождик?»</em>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="footer__drops" aria-hidden="true">💧 💧 💧</div>
+    <p>© 2026 «Путешествие Кап-Кап» · Екатерина Макарова</p>
+    <p class="footer__sub">Все права защищены · Издаётся на <a href="https://www.litres.ru" target="_blank" rel="noopener">ЛитРес</a></p>
+  </footer>
+
+  <script>
+    // ── Custom cursor ──
+    const cursor = document.getElementById('cursor');
+    document.addEventListener('mousemove', e => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top  = e.clientY + 'px';
+    });
+    document.querySelectorAll('a, button').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('cursor--big'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('cursor--big'));
+    });
+
+    // ── Generate rain ──
+    const rainContainer = document.getElementById('rain');
+    for (let i = 0; i < 60; i++) {
+      const drop = document.createElement('div');
+      drop.className = 'rain__drop';
+      drop.style.left          = Math.random() * 100 + '%';
+      drop.style.animationDuration = (0.6 + Math.random() * 1.2) + 's';
+      drop.style.animationDelay    = (Math.random() * 3) + 's';
+      drop.style.opacity        = 0.3 + Math.random() * 0.5;
+      rainContainer.appendChild(drop);
+    }
+
+    // ── Generate snow in excerpt ──
+    const snowContainer = document.getElementById('snow');
+    for (let i = 0; i < 30; i++) {
+      const flake = document.createElement('div');
+      flake.className = 'snow__flake';
+      flake.textContent = '❄';
+      flake.style.left             = Math.random() * 100 + '%';
+      flake.style.fontSize         = (0.6 + Math.random() * 0.8) + 'rem';
+      flake.style.animationDuration = (4 + Math.random() * 6) + 's';
+      flake.style.animationDelay   = (Math.random() * 5) + 's';
+      flake.style.opacity          = 0.2 + Math.random() * 0.4;
+      snowContainer.appendChild(flake);
+    }
+
+    // ── Scroll reveal ──
+    const reveals = document.querySelectorAll('.reveal');
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => obs.observe(el));
+
+    // ── Smooth anchor scroll ──
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+      });
+    });
+
+    // ── Scroll droplet animation ──
+    (function () {
+      const drop    = document.getElementById('sdrop');
+      const puddle  = document.getElementById('sdrop-puddle');
+      if (!drop) return;
+
+      const START_VH   = 6;   // top position (vh) when scroll = 0
+      const END_VH     = 88;  // position (vh) just before splash
+      const SPLASH_PCT = 0.97; // trigger splash at 97% scroll
+      const PAUSE_MS   = 120; // ms after last scroll event → "paused"
+
+      let scrollTimer  = null;
+      let hasSplashed  = false;
+      let lastProgress = 0;
+
+      function progress() {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        return max > 0 ? Math.min(window.scrollY / max, 1) : 0;
+      }
+
+      function setPos(p) {
+        const y = START_VH + (END_VH - START_VH) * p;
+        drop.style.top = y + 'vh';
+      }
+
+      function triggerSplash() {
+        drop.classList.add('sdrop--splash');
+        puddle.classList.add('sdrop-puddle--active');
+        setTimeout(() => drop.classList.add('sdrop--hidden'), 320);
+      }
+
+      function resetSplash() {
+        hasSplashed = false;
+        drop.classList.remove('sdrop--splash', 'sdrop--hidden');
+        puddle.classList.remove('sdrop-puddle--active');
+      }
+
+      function onScroll() {
+        const p = progress();
+
+        // reset if scrolled back up
+        if (p < SPLASH_PCT && hasSplashed) resetSplash();
+
+        if (!hasSplashed) {
+          setPos(p);
+          drop.classList.remove('sdrop--paused');
+          drop.classList.add('sdrop--falling');
+
+          if (p >= SPLASH_PCT) {
+            hasSplashed = true;
+            triggerSplash();
+            return;
+          }
+        }
+
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          if (!hasSplashed) {
+            drop.classList.remove('sdrop--falling');
+            drop.classList.add('sdrop--paused');
+          }
+        }, PAUSE_MS);
+
+        lastProgress = p;
+      }
+
+      // init
+      setPos(progress());
+      drop.classList.add('sdrop--paused');
+      window.addEventListener('scroll', onScroll, { passive: true });
+    })();
+  </script>
 
 </body>
 </html>
