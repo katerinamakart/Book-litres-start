@@ -499,39 +499,68 @@ body {
   color: var(--blue-mid); margin-bottom: 28px;
   display: block; text-align: center;
 }
-.excerpt__layout {
+/* ── Two-season spread ── */
+.excerpt__seasons {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  align-items: center;
+  gap: 32px;
+  margin-bottom: 36px;
 }
-.excerpt__illo {
-  display: flex;
-  justify-content: center;
+
+.season-card {
+  background: rgba(255,255,255,0.72);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(3,105,161,0.12);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
-.excerpt__illo-svg {
+.season-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 48px rgba(3,105,161,0.2);
+}
+
+.season-card__illo img {
   width: 100%;
-  max-width: 280px;
-  height: auto;
-  filter: drop-shadow(0 8px 24px rgba(14,165,233,0.2));
-  animation: drip 4s ease-in-out infinite;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
-.excerpt__quote {
-  font-size: clamp(1rem, 2vw, 1.15rem);
-  color: var(--text); font-weight: 600;
-  line-height: 1.9; list-style: none;
-  font-style: normal; text-align: left;
+
+.season-card__verse {
+  padding: 20px 22px 24px;
+  font-style: normal;
 }
-.excerpt__quote p { margin-bottom: 1.2em; }
-.excerpt__quote p:last-child { margin-bottom: 0; }
+
+.season-card__label {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue-mid);
+  margin-bottom: 12px;
+}
+
+.season-card__verse p {
+  font-size: clamp(0.88rem, 1.5vw, 1rem);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.85;
+  margin: 0;
+}
+.season-card__verse em { font-style: italic; color: var(--blue-deep); }
+
+.excerpt__finale {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--blue-deep);
+  letter-spacing: 0.01em;
+}
 
 @media (max-width: 640px) {
-  .excerpt__layout {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  .excerpt__quote { text-align: center; }
-  .excerpt__illo-svg { max-width: 200px; }
+  .excerpt__seasons { grid-template-columns: 1fr; gap: 20px; }
 }
 
 /* ===== ABOUT ===== */
