@@ -209,19 +209,19 @@ body {
   height: 460px;
 }
 
-/* Standing cover — top-right, behind */
+/* Standing cover — top-left, behind */
 .scene__cover {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
   z-index: 1;
 }
 
-/* Open spread — bottom-left, in front */
+/* Open spread — bottom-right, in front */
 .scene__spread {
   position: absolute;
   bottom: 0;
-  left: 0;
+  right: 0;
   z-index: 3;
 }
 
