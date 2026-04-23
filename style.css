@@ -1059,8 +1059,8 @@ body {
 /* ── PUDDLE ── */
 .sdrop-puddle {
   position: absolute;
-  bottom: 9vh;
-  right: -36px;
+  bottom: 2vh;
+  right: 18px;
   width: 200px;
   display: flex;
   align-items: center;
