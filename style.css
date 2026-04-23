@@ -514,12 +514,14 @@ body {
   background: linear-gradient(135deg, #f0f9ff 0%, #fafeff 100%);
 }
 
-.slide--text-only {
+.slide--cycle {
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
-  padding: 40px;
-  gap: 28px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 32px 28px;
+  gap: 20px;
 }
 
 .slide--features {
@@ -629,15 +631,65 @@ body {
   align-self: center;
   padding-bottom: 18px;
 }
-.slide__cycle {
+/* Cycle slide layout */
+.cycle__title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text);
+  text-align: center;
+}
+.cycle__loop {
+  width: 100%;
+  max-width: 640px;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 0;
+}
+.cycle__row {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px 0;
+  gap: 6px;
+}
+.cycle__sides {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 28px;
+}
+.cycle__side-arr {
+  font-size: 1.6rem;
+  color: var(--blue-light);
+  line-height: 1;
+  padding: 4px 0;
+}
+.cycle__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   background: var(--blue-ghost);
   border-radius: var(--r-md);
-  padding: 20px 16px 16px;
+  padding: 14px 16px 10px;
+  min-width: 88px;
+}
+.cycle__icon { font-size: 2.4rem; line-height: 1; }
+.cycle__item span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-light);
+  text-align: center;
+}
+.cycle__arr {
+  font-size: 1.4rem;
+  color: var(--blue-light);
+  font-weight: 300;
+  flex-shrink: 0;
+}
+.cycle__caption {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  text-align: center;
+  margin-top: 4px;
 }
 
 /* Features grid (slide 5) */
