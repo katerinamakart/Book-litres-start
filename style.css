@@ -556,8 +556,8 @@ body {
 
 .slide--features {
   grid-template-columns: 1fr;
-  padding: 40px;
-  gap: 24px;
+  padding: 22px 32px 24px;
+  gap: 14px;
 }
 
 /* Illustration pane */
@@ -723,20 +723,30 @@ body {
 }
 
 /* Features grid (slide 5) */
+.slide__feats-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text);
+  text-align: center;
+}
+
 .slide__feats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
 }
 .slide__feat {
   background: var(--blue-ghost);
   border-radius: var(--r-md);
-  padding: 16px;
+  padding: 12px 14px;
   border-left: 3px solid var(--blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
-.slide__feat span { font-size: 1.4rem; display: block; margin-bottom: 6px; }
-.slide__feat strong { font-size: 0.88rem; color: var(--text); display: block; margin-bottom: 4px; }
-.slide__feat p { font-size: 0.8rem; color: var(--text-light); line-height: 1.5; margin: 0; }
+.slide__feat span { font-size: 1.2rem; line-height: 1; }
+.slide__feat strong { font-size: 0.85rem; color: var(--text); }
+.slide__feat p { font-size: 0.76rem; color: var(--text-light); line-height: 1.45; margin: 0; }
 
 /* ── Arrow buttons ── */
 .bookshow__arrow {
