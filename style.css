@@ -501,7 +501,7 @@ body {
 
 /* ===== SLIDESHOW ===== */
 .bookshow {
-  padding: 40px 24px 36px;
+  padding: 40px 24px 16px;
   background: #ffffff;
   overflow: hidden;
 }
@@ -772,7 +772,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 14px;
 }
 .dot {
   width: 10px; height: 10px;
@@ -813,7 +813,7 @@ body {
 
 /* ===== FOR WHOM ===== */
 .for-whom {
-  padding: 48px 24px;
+  padding: 28px 24px 48px;
   background: linear-gradient(160deg, #edf6fd 0%, #f5eeff 100%);
 }
 .for-whom__inner { max-width: 920px; margin: 0 auto; }
