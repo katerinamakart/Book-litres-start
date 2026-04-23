@@ -976,13 +976,14 @@ body {
 }
 .sdrop__sp {
   position: absolute;
-  width: 7px;
-  height: 11px;
-  background: linear-gradient(to bottom, #bae6fd, #0ea5e9);
-  border-radius: 50% 50% 40% 40%;
-  left: -3.5px;
+  width: 12px;
+  height: 22px;
+  background: linear-gradient(to bottom, #e0f2fe, #0ea5e9);
+  border-radius: 50% 50% 42% 42%;
+  left: -6px;
   bottom: 0;
   opacity: 0;
+  box-shadow: 0 0 6px rgba(14,165,233,0.7);
 }
 
 /* ── FALLING ── */
@@ -1028,30 +1029,32 @@ body {
   to { opacity: 0; transform: translateY(-14px) scale(0.4); }
 }
 
-/* 8 splash drops fan */
-.sdrop--splash .sdrop__sp { animation: spFly 0.7s ease-out forwards; }
+/* splash drops */
+.sdrop--splash .sdrop__sp { animation: spFly 1.1s cubic-bezier(0.2,0.8,0.4,1) forwards; }
 
 @keyframes spFly {
-  0%   { opacity: 1; transform: translate(var(--dx0), 0)           rotate(var(--r)); }
-  100% { opacity: 0; transform: translate(var(--dx1), var(--dy1))  rotate(var(--r)); }
+  0%   { opacity: 1;   transform: translate(0, 0)                       rotate(var(--r)) scale(1); }
+  60%  { opacity: 1;   transform: translate(var(--mx), var(--my))       rotate(var(--r)) scale(1); }
+  100% { opacity: 0;   transform: translate(var(--dx1), var(--dy1))     rotate(var(--r)) scale(0.5); }
 }
-/* вверх */
-.sdrop__sp--0  { --dx0:  0px; --dx1:   0px; --dy1: -72px; --r:   0deg; animation-delay: 0.00s; }
-.sdrop__sp--7  { --dx0:  0px; --dx1:  12px; --dy1: -74px; --r:  10deg; animation-delay: 0.01s; }
+
+/* прямо вверх */
+.sdrop__sp--0  { --mx:   0px; --my: -100px; --dx1:   0px; --dy1: -160px; --r:   0deg; animation-delay: 0.00s; }
+.sdrop__sp--7  { --mx:  16px; --my: -100px; --dx1:  22px; --dy1: -165px; --r:  10deg; animation-delay: 0.01s; }
+.sdrop__sp--10 { --mx: -16px; --my: -100px; --dx1: -22px; --dy1: -165px; --r: -10deg; animation-delay: 0.01s; }
 /* вверх-в сторону */
-.sdrop__sp--1  { --dx0:  0px; --dx1:  28px; --dy1: -64px; --r:  22deg; animation-delay: 0.02s; }
-.sdrop__sp--4  { --dx0:  0px; --dx1: -28px; --dy1: -64px; --r: -22deg; animation-delay: 0.02s; }
-.sdrop__sp--2  { --dx0:  0px; --dx1:  54px; --dy1: -46px; --r:  44deg; animation-delay: 0.03s; }
-.sdrop__sp--5  { --dx0:  0px; --dx1: -54px; --dy1: -46px; --r: -44deg; animation-delay: 0.03s; }
+.sdrop__sp--1  { --mx:  50px; --my:  -80px; --dx1:  80px; --dy1: -130px; --r:  28deg; animation-delay: 0.02s; }
+.sdrop__sp--4  { --mx: -50px; --my:  -80px; --dx1: -80px; --dy1: -130px; --r: -28deg; animation-delay: 0.02s; }
+.sdrop__sp--2  { --mx:  90px; --my:  -55px; --dx1: 140px; --dy1:  -85px; --r:  50deg; animation-delay: 0.03s; }
+.sdrop__sp--5  { --mx: -90px; --my:  -55px; --dx1:-140px; --dy1:  -85px; --r: -50deg; animation-delay: 0.03s; }
 /* почти горизонтально */
-.sdrop__sp--3  { --dx0:  0px; --dx1:  76px; --dy1: -18px; --r:  68deg; animation-delay: 0.04s; }
-.sdrop__sp--6  { --dx0:  0px; --dx1: -76px; --dy1: -18px; --r: -68deg; animation-delay: 0.04s; }
-/* совсем в стороны */
-.sdrop__sp--8  { --dx0:  0px; --dx1:  92px; --dy1:   4px; --r:  82deg; animation-delay: 0.05s; }
-.sdrop__sp--9  { --dx0:  0px; --dx1: -92px; --dy1:   4px; --r: -82deg; animation-delay: 0.05s; }
-/* мелкие быстрые вверх */
-.sdrop__sp--10 { --dx0:  0px; --dx1:  18px; --dy1: -80px; --r:  14deg; animation-delay: 0.01s; }
-.sdrop__sp--11 { --dx0:  0px; --dx1: -18px; --dy1: -80px; --r: -14deg; animation-delay: 0.01s; }
+.sdrop__sp--3  { --mx: 130px; --my:  -20px; --dx1: 195px; --dy1:  -30px; --r:  74deg; animation-delay: 0.04s; }
+.sdrop__sp--6  { --mx:-130px; --my:  -20px; --dx1:-195px; --dy1:  -30px; --r: -74deg; animation-delay: 0.04s; }
+/* горизонтально */
+.sdrop__sp--8  { --mx: 160px; --my:    0px; --dx1: 220px; --dy1:   10px; --r:  88deg; animation-delay: 0.05s; }
+.sdrop__sp--9  { --mx:-160px; --my:    0px; --dx1:-220px; --dy1:   10px; --r: -88deg; animation-delay: 0.05s; }
+/* крупные диагональные */
+.sdrop__sp--11 { --mx:  70px; --my: -110px; --dx1: 110px; --dy1: -155px; --r:  36deg; animation-delay: 0.02s; }
 
 /* ── HIDDEN ── */
 .sdrop--hidden { opacity: 0; }
