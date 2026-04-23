@@ -431,15 +431,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
-  color: #ef4444;
+  background: #fff;
+  color: #dc2626;
   font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: none;
-  padding: 7px 20px;
+  padding: 8px 22px;
   border-radius: 8px;
-  border: 2px solid #ef4444;
+  border: 2.5px solid #dc2626;
   margin-bottom: 16px;
   animation: pulseBadge 2.4s ease-in-out infinite;
 }
