@@ -1035,14 +1035,23 @@ body {
   0%   { opacity: 1; transform: translate(var(--dx0), 0)           rotate(var(--r)); }
   100% { opacity: 0; transform: translate(var(--dx1), var(--dy1))  rotate(var(--r)); }
 }
-.sdrop__sp--0 { --dx0:   0px; --dx1:   0px; --dy1: -58px; --r:   0deg; animation-delay: 0.00s; }
-.sdrop__sp--1 { --dx0:   0px; --dx1:  20px; --dy1: -54px; --r:  20deg; animation-delay: 0.02s; }
-.sdrop__sp--2 { --dx0:   0px; --dx1:  40px; --dy1: -40px; --r:  40deg; animation-delay: 0.03s; }
-.sdrop__sp--3 { --dx0:   0px; --dx1:  54px; --dy1: -18px; --r:  58deg; animation-delay: 0.04s; }
-.sdrop__sp--4 { --dx0:   0px; --dx1: -20px; --dy1: -54px; --r: -20deg; animation-delay: 0.02s; }
-.sdrop__sp--5 { --dx0:   0px; --dx1: -40px; --dy1: -40px; --r: -40deg; animation-delay: 0.03s; }
-.sdrop__sp--6 { --dx0:   0px; --dx1: -54px; --dy1: -18px; --r: -58deg; animation-delay: 0.04s; }
-.sdrop__sp--7 { --dx0:   0px; --dx1:  10px; --dy1: -60px; --r:  10deg; animation-delay: 0.01s; }
+/* вверх */
+.sdrop__sp--0  { --dx0:  0px; --dx1:   0px; --dy1: -72px; --r:   0deg; animation-delay: 0.00s; }
+.sdrop__sp--7  { --dx0:  0px; --dx1:  12px; --dy1: -74px; --r:  10deg; animation-delay: 0.01s; }
+/* вверх-в сторону */
+.sdrop__sp--1  { --dx0:  0px; --dx1:  28px; --dy1: -64px; --r:  22deg; animation-delay: 0.02s; }
+.sdrop__sp--4  { --dx0:  0px; --dx1: -28px; --dy1: -64px; --r: -22deg; animation-delay: 0.02s; }
+.sdrop__sp--2  { --dx0:  0px; --dx1:  54px; --dy1: -46px; --r:  44deg; animation-delay: 0.03s; }
+.sdrop__sp--5  { --dx0:  0px; --dx1: -54px; --dy1: -46px; --r: -44deg; animation-delay: 0.03s; }
+/* почти горизонтально */
+.sdrop__sp--3  { --dx0:  0px; --dx1:  76px; --dy1: -18px; --r:  68deg; animation-delay: 0.04s; }
+.sdrop__sp--6  { --dx0:  0px; --dx1: -76px; --dy1: -18px; --r: -68deg; animation-delay: 0.04s; }
+/* совсем в стороны */
+.sdrop__sp--8  { --dx0:  0px; --dx1:  92px; --dy1:   4px; --r:  82deg; animation-delay: 0.05s; }
+.sdrop__sp--9  { --dx0:  0px; --dx1: -92px; --dy1:   4px; --r: -82deg; animation-delay: 0.05s; }
+/* мелкие быстрые вверх */
+.sdrop__sp--10 { --dx0:  0px; --dx1:  18px; --dy1: -80px; --r:  14deg; animation-delay: 0.01s; }
+.sdrop__sp--11 { --dx0:  0px; --dx1: -18px; --dy1: -80px; --r: -14deg; animation-delay: 0.01s; }
 
 /* ── HIDDEN ── */
 .sdrop--hidden { opacity: 0; }
@@ -1051,8 +1060,8 @@ body {
 .sdrop-puddle {
   position: absolute;
   bottom: 9vh;
-  right: -18px;
-  width: 116px;
+  right: -36px;
+  width: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1063,8 +1072,8 @@ body {
 .sdrop-puddle--active { opacity: 1; }
 
 .sdrop-puddle__body {
-  width: 72px;
-  height: 26px;
+  width: 150px;
+  height: 46px;
   background: radial-gradient(ellipse at center,
     rgba(14,165,233,0.72) 0%,
     rgba(56,189,248,0.45) 45%,
@@ -1088,8 +1097,8 @@ body {
 .sdrop-puddle--active .sdrop-puddle__ring--3 { animation-delay: 0.56s; }
 
 @keyframes puddleRing {
-  0%   { width: 10px;  height: 10px;  opacity: 0.95; }
-  100% { width: 100px; height: 100px; opacity: 0;    }
+  0%   { width: 14px;  height: 14px;  opacity: 0.95; }
+  100% { width: 160px; height: 160px; opacity: 0;    }
 }
 
 @media (max-width: 768px) {
