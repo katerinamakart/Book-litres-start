@@ -11,11 +11,62 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 
+STORYBOOK_PALETTE = np.array([
+    [255, 252, 246],
+    [255, 235, 210],
+    [255, 205, 175],
+    [255, 165, 185],
+    [240, 175, 135],
+    [255, 215, 95],
+    [255, 235, 70],
+    [255, 185, 45],
+    [255, 135, 55],
+    [255, 115, 135],
+    [255, 95, 155],
+    [185, 225, 255],
+    [95, 165, 255],
+    [50, 115, 235],
+    [30, 55, 150],
+    [25, 45, 110],
+    [155, 235, 185],
+    [75, 195, 95],
+    [35, 135, 65],
+    [200, 175, 255],
+    [130, 75, 195],
+    [155, 95, 60],
+    [85, 50, 35],
+    [115, 105, 125],
+], dtype=np.float32)
+
+
+def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
+    rgb = np.clip(rgb / 255.0, 0.0, 1.0)
+    mask = rgb > 0.04045
+    rgb = np.where(mask, ((rgb + 0.055) / 1.055) ** 2.4, rgb / 12.92)
+
+    x = (rgb[..., 0] * 0.4124564 + rgb[..., 1] * 0.3575761 + rgb[..., 2] * 0.1804375) / 0.95047
+    y = rgb[..., 0] * 0.2126729 + rgb[..., 1] * 0.7151522 + rgb[..., 2] * 0.0721750
+    z = (rgb[..., 0] * 0.0193339 + rgb[..., 1] * 0.1191920 + rgb[..., 2] * 0.9503041) / 1.08883
+
+    def f(t: np.ndarray) -> np.ndarray:
+        return np.where(t > 0.008856, np.cbrt(t), (7.787 * t) + (16 / 116))
+
+    fx, fy, fz = f(x), f(y), f(z)
+    return np.stack([(116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz)], axis=-1)
+
+
+def map_to_storybook_palette(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
+    palette = STORYBOOK_PALETTE[: max(12, min(num_colors, len(STORYBOOK_PALETTE)))]
+    pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
+    pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
+    palette_lab = _rgb_to_lab(palette)
+    dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
+    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
+    return labels, palette.astype(np.uint8)
+
+
 def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    quantized = image.convert("RGB").quantize(colors=num_colors, method=Image.Quantize.MEDIANCUT)
-    palette = np.array(quantized.getpalette(), dtype=np.uint8).reshape(-1, 3)[:num_colors]
-    labels = np.array(quantized, dtype=np.int32)
-    return labels, palette
+    return map_to_storybook_palette(image, num_colors)
 
 
 def create_outline(labels: np.ndarray) -> Image.Image:
@@ -153,7 +204,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Create paint-by-numbers files from an image.")
     parser.add_argument("input", type=Path, help="Source image path")
     parser.add_argument("-o", "--output-dir", type=Path, default=Path("paint-by-numbers"))
-    parser.add_argument("--colors", type=int, default=24, help="Number of paint colors")
+    parser.add_argument("--colors", type=int, default=24, help="Number of fixed storybook colors (12-24)")
     parser.add_argument("--min-label", type=int, default=600, help="Minimum area to show a number")
     parser.add_argument("--max-size", type=int, default=1300, help="Max width/height")
     args = parser.parse_args()
