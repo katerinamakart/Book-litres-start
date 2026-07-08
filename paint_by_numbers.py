@@ -104,7 +104,14 @@ def generate_paint_by_numbers(
     max_dimension: int = 1200,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    image = Image.open(input_path).convert("RGB")
+    image = Image.open(input_path)
+    try:
+        from PIL import ImageOps
+
+        image = ImageOps.exif_transpose(image)
+    except Exception:
+        pass
+    image = image.convert("RGB")
 
     scale = min(1.0, max_dimension / max(image.size))
     if scale < 1.0:

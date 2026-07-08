@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Картина по номерам</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --border: #dbe3ef;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.8rem; }
+    .lead { color: var(--muted); margin: 0 0 24px; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: #eff6ff;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    label { display: block; font-size: 0.9rem; margin-bottom: 6px; color: var(--muted); }
+    input[type="range"] { width: 100%; }
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .downloads {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .downloads a {
+      text-decoration: none;
+      background: #eef2ff;
+      color: #1e40af;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .preview-card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+    canvas, img {
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: white;
+    }
+    .status { margin-top: 12px; color: var(--muted); min-height: 1.5em; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Картина по номерам</h1>
+    <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
+
+    <div class="panel">
+      <div class="dropzone" id="dropzone">
+        <strong>Перетащите фото сюда</strong><br>
+        или нажмите, чтобы выбрать файл
+      </div>
+      <input class="hidden" id="fileInput" type="file" accept="image/*">
+
+      <div class="controls">
+        <div>
+          <label for="colors">Количество цветов: <span id="colorsValue">24</span></label>
+          <input id="colors" type="range" min="12" max="36" value="24">
+        </div>
+        <div>
+          <label for="detail">Детализация: <span id="detailValue">средняя</span></label>
+          <input id="detail" type="range" min="1" max="3" value="2">
+        </div>
+        <div style="display:flex; align-items:end;">
+          <button id="generateBtn" disabled>Создать картину</button>
+        </div>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="downloads hidden" id="downloads"></div>
+    </div>
+
+    <div class="preview-grid hidden" id="previews">
+      <div class="preview-card">
+        <h3>Шаблон для раскрашивания</h3>
+        <canvas id="templateCanvas"></canvas>
+      </div>
+      <div class="preview-card">
+        <h3>Цветной образец</h3>
+        <canvas id="referenceCanvas"></canvas>
+      </div>
+      <div class="preview-card">
+        <h3>Палитра</h3>
+        <canvas id="paletteCanvas"></canvas>
+      </div>
+      <div class="preview-card">
+        <h3>Для печати</h3>
+        <canvas id="printableCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const dropzone = document.getElementById("dropzone");
+    const generateBtn = document.getElementById("generateBtn");
+    const statusEl = document.getElementById("status");
+    const downloadsEl = document.getElementById("downloads");
+    const previewsEl = document.getElementById("previews");
+    const colorsInput = document.getElementById("colors");
+    const detailInput = document.getElementById("detail");
+    const colorsValue = document.getElementById("colorsValue");
+    const detailValue = document.getElementById("detailValue");
+
+    let sourceImage = null;
+
+    const detailLabels = ["низкая", "средняя", "высокая"];
+
+    colorsInput.addEventListener("input", () => {
+      colorsValue.textContent = colorsInput.value;
+    });
+    detailInput.addEventListener("input", () => {
+      detailValue.textContent = detailLabels[detailInput.value - 1];
+    });
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) loadFile(fileInput.files[0]);
+    });
+    generateBtn.addEventListener("click", generate);
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = img;
+          generateBtn.disabled = false;
+          statusEl.textContent = `Загружено: ${file.name} (${img.width}×${img.height})`;
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resizeImage(img, maxSize) {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      return ctx.getImageData(0, 0, width, height);
+    }
+
+    function rgbDist(a, b) {
+      const dr = a[0] - b[0];
+      const dg = a[1] - b[1];
+      const db = a[2] - b[2];
+      return dr * dr + dg * dg + db * db;
+    }
+
+    function kmeans(pixels, k, iterations = 12) {
+      const centroids = [];
+      const used = new Set();
+      while (centroids.length < k) {
+        const idx = Math.floor(Math.random() * pixels.length);
+        if (used.has(idx)) continue;
+        used.add(idx);
+        centroids.push(pixels[idx].slice());
+      }
+
+      const labels = new Array(pixels.length).fill(0);
+      for (let iter = 0; iter < iterations; iter++) {
+        for (let i = 0; i < pixels.length; i++) {
+          let best = 0;
+          let bestDist = Infinity;
+          for (let c = 0; c < centroids.length; c++) {
+            const d = rgbDist(pixels[i], centroids[c]);
+            if (d < bestDist) {
+              bestDist = d;
+              best = c;
+            }
+          }
+          labels[i] = best;
+        }
+
+        const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
+        for (let i = 0; i < pixels.length; i++) {
+          const l = labels[i];
+          sums[l][0] += pixels[i][0];
+          sums[l][1] += pixels[i][1];
+          sums[l][2] += pixels[i][2];
+          sums[l][3] += 1;
+        }
+        for (let c = 0; c < k; c++) {
+          if (sums[c][3] === 0) continue;
+          centroids[c] = [
+            Math.round(sums[c][0] / sums[c][3]),
+            Math.round(sums[c][1] / sums[c][3]),
+            Math.round(sums[c][2] / sums[c][3]),
+          ];
+        }
+      }
+
+      return { centroids, labels };
+    }
+
+    function nearestCentroid(rgb, centroids) {
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < centroids.length; i++) {
+        const d = rgbDist(rgb, centroids[i]);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      return best;
+    }
+
+    function buildLabelMap(imageData, centroids) {
+      const { width, height, data } = imageData;
+      const labels = new Int32Array(width * height);
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        labels[p] = nearestCentroid([data[i], data[i + 1], data[i + 2]], centroids);
+      }
+      return { width, height, labels };
+    }
+
+    function connectedComponents(labels, width, height, colorId) {
+      const visited = new Uint8Array(labels.length);
+      const components = [];
+      const dirs = [1, -1, width, -width];
+
+      for (let start = 0; start < labels.length; start++) {
+        if (labels[start] !== colorId || visited[start]) continue;
+        const queue = [start];
+        visited[start] = 1;
+        let sumX = 0;
+        let sumY = 0;
+        let size = 0;
+
+        while (queue.length) {
+          const idx = queue.pop();
+          const x = idx % width;
+          const y = (idx / width) | 0;
+          sumX += x;
+          sumY += y;
+          size += 1;
+
+          for (const d of dirs) {
+            const next = idx + d;
+            if (next < 0 || next >= labels.length) continue;
+            if (visited[next] || labels[next] !== colorId) continue;
+            if (d === 1 && x === width - 1) continue;
+            if (d === -1 && x === 0) continue;
+            visited[next] = 1;
+            queue.push(next);
+          }
+        }
+
+        components.push({
+          size,
+          cx: sumX / size,
+          cy: sumY / size,
+        });
+      }
+      return components;
+    }
+
+    function drawTemplate(labelMap, centroids, minLabelArea) {
+      const { width, height, labels } = labelMap;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.createImageData(width, height);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const edge =
+            (x > 0 && labels[idx] !== labels[idx - 1]) ||
+            (y > 0 && labels[idx] !== labels[idx - width]);
+          const p = idx * 4;
+          const color = edge ? 25 : 255;
+          imageData.data[p] = color;
+          imageData.data[p + 1] = color;
+          imageData.data[p + 2] = color;
+          imageData.data[p + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      ctx.fillStyle = "#111";
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 2;
+      ctx.font = `bold ${Math.max(10, Math.round(width / 55))}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      for (let colorId = 0; colorId < centroids.length; colorId++) {
+        const parts = connectedComponents(labels, width, height, colorId);
+        for (const part of parts) {
+          if (part.size < minLabelArea) continue;
+          const text = String(colorId + 1);
+          ctx.strokeText(text, part.cx, part.cy);
+          ctx.fillText(text, part.cx, part.cy);
+        }
+      }
+
+      return canvas;
+    }
+
+    function drawReference(labelMap, centroids) {
+      const { width, height, labels } = labelMap;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.createImageData(width, height);
+      for (let i = 0; i < labels.length; i++) {
+        const rgb = centroids[labels[i]];
+        const p = i * 4;
+        imageData.data[p] = rgb[0];
+        imageData.data[p + 1] = rgb[1];
+        imageData.data[p + 2] = rgb[2];
+        imageData.data[p + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return canvas;
+    }
+
+    function drawPalette(centroids) {
+      const columns = 4;
+      const swatch = 52;
+      const rows = Math.ceil(centroids.length / columns);
+      const width = 520;
+      const height = rows * (swatch + 36) + 56;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#111";
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText("Палитра цветов", 20, 34);
+      ctx.font = "bold 18px sans-serif";
+
+      const colWidth = width / columns;
+      centroids.forEach((rgb, index) => {
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        const x = 20 + col * colWidth;
+        const y = 52 + row * (swatch + 36);
+        ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        ctx.fillRect(x, y, swatch, swatch);
+        ctx.strokeStyle = "#222";
+        ctx.strokeRect(x, y, swatch, swatch);
+        ctx.fillStyle = "#111";
+        ctx.fillText(`№ ${index + 1}`, x, y + swatch + 22);
+      });
+      return canvas;
+    }
+
+    function combineForPrint(templateCanvas, paletteCanvas) {
+      const canvas = document.createElement("canvas");
+      canvas.width = templateCanvas.width;
+      canvas.height = templateCanvas.height + paletteCanvas.height + 20;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(templateCanvas, 0, 0);
+      ctx.drawImage(paletteCanvas, 0, templateCanvas.height + 20);
+      return canvas;
+    }
+
+    function showCanvas(targetId, sourceCanvas) {
+      const target = document.getElementById(targetId);
+      target.width = sourceCanvas.width;
+      target.height = sourceCanvas.height;
+      target.getContext("2d").drawImage(sourceCanvas, 0, 0);
+    }
+
+    function addDownload(canvas, name) {
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = name;
+      link.textContent = name;
+      downloadsEl.appendChild(link);
+    }
+
+    async function generate() {
+      if (!sourceImage) return;
+      generateBtn.disabled = true;
+      statusEl.textContent = "Создаём картину по номерам…";
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      const colors = Number(colorsInput.value);
+      const detail = Number(detailInput.value);
+      const maxSize = detail === 1 ? 900 : detail === 2 ? 1100 : 1300;
+      const minLabelArea = detail === 1 ? 1800 : detail === 2 ? 1000 : 600;
+      const sampleStep = detail === 1 ? 6 : detail === 2 ? 4 : 3;
+
+      const imageData = resizeImage(sourceImage, maxSize);
+      const pixels = [];
+      for (let i = 0; i < imageData.data.length; i += 4 * sampleStep) {
+        pixels.push([imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]]);
+      }
+
+      const { centroids } = kmeans(pixels, colors);
+      const labelMap = buildLabelMap(imageData, centroids);
+      const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
+      const referenceCanvas = drawReference(labelMap, centroids);
+      const paletteCanvas = drawPalette(centroids);
+      const printableCanvas = combineForPrint(templateCanvas, paletteCanvas);
+
+      showCanvas("templateCanvas", templateCanvas);
+      showCanvas("referenceCanvas", referenceCanvas);
+      showCanvas("paletteCanvas", paletteCanvas);
+      showCanvas("printableCanvas", printableCanvas);
+
+      downloadsEl.innerHTML = "";
+      addDownload(templateCanvas, "template.png");
+      addDownload(referenceCanvas, "reference.png");
+      addDownload(paletteCanvas, "palette.png");
+      addDownload(printableCanvas, "printable.png");
+
+      previewsEl.classList.remove("hidden");
+      downloadsEl.classList.remove("hidden");
+      statusEl.textContent = "Готово! Скачайте файлы или распечатайте printable.png";
+      generateBtn.disabled = false;
+    }
+  </script>
+</body>
+</html>
