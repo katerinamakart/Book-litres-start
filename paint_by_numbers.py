@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import colorsys
 from pathlib import Path
 
 import numpy as np
@@ -11,32 +12,53 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 
-STORYBOOK_PALETTE = np.array([
-    [255, 252, 246],
-    [255, 235, 210],
-    [255, 205, 175],
-    [255, 165, 185],
-    [240, 175, 135],
-    [255, 215, 95],
-    [255, 235, 70],
-    [255, 185, 45],
-    [255, 135, 55],
-    [255, 115, 135],
-    [255, 95, 155],
-    [185, 225, 255],
-    [95, 165, 255],
-    [50, 115, 235],
-    [30, 55, 150],
-    [25, 45, 110],
-    [155, 235, 185],
-    [75, 195, 95],
-    [35, 135, 65],
-    [200, 175, 255],
-    [130, 75, 195],
-    [155, 95, 60],
-    [85, 50, 35],
-    [115, 105, 125],
-], dtype=np.float32)
+def build_rainbow_palette(count: int) -> np.ndarray:
+    count = max(12, min(count, 24))
+    colors = []
+    for i in range(count):
+        hue = i / count
+        r, g, b = colorsys.hls_to_rgb(hue, 0.56, 0.94)
+        colors.append([int(round(r * 255)), int(round(g * 255)), int(round(b * 255))])
+    return np.array(colors, dtype=np.uint8)
+
+
+def _rgb_to_hue(rgb: np.ndarray) -> float:
+    r, g, b = rgb / 255.0
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx == mn:
+        return 0.0
+    d = mx - mn
+    if mx == r:
+        h = ((g - b) / d + (6 if g < b else 0)) / 6
+    elif mx == g:
+        h = ((b - r) / d + 2) / 6
+    else:
+        h = ((r - g) / d + 4) / 6
+    return h * 360
+
+
+def compact_used_colors(labels: np.ndarray, palette: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    used = np.unique(labels)
+    used_sorted = sorted(used, key=lambda idx: (_rgb_to_hue(palette[idx]), idx))
+    remap = {int(old): new for new, old in enumerate(used_sorted)}
+    remap_fn = np.vectorize(remap.__getitem__)
+    compact_labels = remap_fn(labels).astype(np.int32)
+    compact_palette = palette[np.array(used_sorted, dtype=np.int32)]
+    return compact_labels, compact_palette
+
+
+def map_to_rainbow_palette(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
+    palette = build_rainbow_palette(num_colors)
+    pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
+    pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
+    palette_lab = _rgb_to_lab(palette.astype(np.float32))
+    dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
+    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
+    return compact_used_colors(labels, palette)
+
+
+def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
+    return map_to_rainbow_palette(image, num_colors)
 
 
 def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
@@ -53,20 +75,6 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
 
     fx, fy, fz = f(x), f(y), f(z)
     return np.stack([(116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz)], axis=-1)
-
-
-def map_to_storybook_palette(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    palette = STORYBOOK_PALETTE[: max(12, min(num_colors, len(STORYBOOK_PALETTE)))]
-    pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
-    pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
-    palette_lab = _rgb_to_lab(palette)
-    dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
-    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
-    return labels, palette.astype(np.uint8)
-
-
-def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    return map_to_storybook_palette(image, num_colors)
 
 
 def create_outline(labels: np.ndarray) -> Image.Image:
