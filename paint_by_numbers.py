@@ -52,33 +52,76 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     return np.stack([(116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz)], axis=-1)
 
 
-def kmeans_from_photo(image: Image.Image, num_colors: int, sample_step: int = 3) -> tuple[np.ndarray, np.ndarray]:
+MASTER_PALETTE = np.array([
+    [25, 22, 28],
+    [54, 69, 79],
+    [90, 55, 35],
+    [120, 75, 45],
+    [160, 90, 45],
+    [100, 20, 40],
+    [140, 20, 45],
+    [150, 15, 45],
+    [200, 90, 30],
+    [220, 100, 50],
+    [255, 140, 40],
+    [250, 128, 114],
+    [255, 175, 160],
+    [255, 210, 185],
+    [255, 200, 50],
+    [255, 210, 60],
+    [255, 225, 155],
+    [255, 230, 120],
+    [255, 245, 180],
+    [255, 245, 200],
+    [20, 70, 40],
+    [30, 90, 45],
+    [45, 130, 65],
+    [75, 175, 85],
+    [110, 120, 95],
+    [143, 165, 140],
+    [175, 195, 170],
+    [170, 220, 80],
+    [190, 230, 70],
+    [160, 230, 180],
+    [180, 210, 165],
+    [0, 140, 90],
+    [0, 150, 160],
+    [50, 190, 200],
+    [20, 40, 95],
+    [30, 60, 180],
+    [45, 90, 200],
+    [70, 130, 210],
+    [135, 200, 245],
+    [135, 206, 235],
+    [176, 196, 214],
+    [190, 50, 90],
+    [210, 30, 90],
+    [220, 60, 120],
+    [255, 50, 120],
+    [255, 105, 180],
+    [255, 130, 160],
+    [255, 170, 190],
+    [255, 182, 170],
+    [255, 200, 210],
+    [230, 210, 240],
+    [220, 195, 160],
+    [253, 245, 230],
+    [255, 252, 248],
+], dtype=np.uint8)
+
+
+def map_to_master_palette(image: Image.Image) -> tuple[np.ndarray, np.ndarray]:
+    palette = MASTER_PALETTE
     pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
-    sampled = pixels[::sample_step, ::sample_step].reshape(-1, 3)
-    rng = np.random.default_rng(42)
-    indices = rng.choice(len(sampled), size=num_colors, replace=False)
-    centroids = sampled[indices].copy()
-
-    for _ in range(18):
-        pixel_lab = _rgb_to_lab(sampled)
-        centroid_lab = _rgb_to_lab(centroids)
-        dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
-        labels = np.argmin(dist, axis=1)
-        for c in range(num_colors):
-            mask = labels == c
-            if np.any(mask):
-                centroids[c] = sampled[mask].mean(axis=0)
-
-    centroids = np.round(centroids).astype(np.uint8)
     pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
-    centroid_lab = _rgb_to_lab(centroids.astype(np.float32))
-    dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
+    palette_lab = _rgb_to_lab(palette.astype(np.float32))
+    dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
     labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
-    return compact_used_colors(labels, centroids)
+    return compact_used_colors(labels, palette)
 
 
-def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    return kmeans_from_photo(image, num_colors)
+def quantize_colors(image: Image.Image, num_colors: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    return map_to_master_palette(image)
 
 
 def create_outline(labels: np.ndarray) -> Image.Image:
