@@ -109,7 +109,7 @@
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
-      <p class="tip">Краски из ваших референсов — гжель, слоник, цветы, бабочка, пионы. Фото сопоставляется с ближайшим оттенком; в палитру попадают только используемые цвета.</p>
+      <p class="tip">Краски из ваших референсов. Картина упрощается — мелкий шум убирается, зоны крупнее и удобнее для раскрашивания.</p>
       <div class="dropzone" id="dropzone">
         <strong>Перетащите фото сюда</strong><br>
         или нажмите, чтобы выбрать файл
@@ -152,7 +152,9 @@
     const previewsEl = document.getElementById("previews");
 
     const MAX_SIZE = 1400;
-    const MIN_LABEL_AREA = 380;
+    const SEGMENT_SIZE = 880;
+    const MIN_REGION_AREA = 140;
+    const MERGE_PASSES = 5;
 
     // Палитра из референсов: гжель, слоник, цветы, бабочка, яблоня, пионы
     const MASTER_PALETTE = [
@@ -357,6 +359,136 @@
       return best;
     }
 
+    function softenImageData(imageData) {
+      const src = document.createElement("canvas");
+      src.width = imageData.width;
+      src.height = imageData.height;
+      src.getContext("2d").putImageData(imageData, 0, 0);
+      const out = document.createElement("canvas");
+      out.width = imageData.width;
+      out.height = imageData.height;
+      const ctx = out.getContext("2d");
+      ctx.filter = "blur(2.5px)";
+      ctx.drawImage(src, 0, 0);
+      ctx.filter = "none";
+      return ctx.getImageData(0, 0, out.width, out.height);
+    }
+
+    function modeFilterLabels(labelMap, radius, passes) {
+      const { width, height, labels } = labelMap;
+      let current = labels;
+      for (let pass = 0; pass < passes; pass++) {
+        const next = new Int32Array(current.length);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const counts = new Map();
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dx = -radius; dx <= radius; dx++) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                const label = current[ny * width + nx];
+                counts.set(label, (counts.get(label) || 0) + 1);
+              }
+            }
+            let best = current[y * width + x];
+            let bestCount = -1;
+            for (const [label, count] of counts) {
+              if (count > bestCount) {
+                bestCount = count;
+                best = label;
+              }
+            }
+            next[y * width + x] = best;
+          }
+        }
+        current = next;
+      }
+      return { width, height, labels: current };
+    }
+
+    function mergeSmallRegions(labelMap, minArea) {
+      const { width, height, labels } = labelMap;
+      const result = new Int32Array(labels);
+      const visited = new Uint8Array(labels.length);
+      const dirs = [1, -1, width, -width];
+
+      for (let start = 0; start < labels.length; start++) {
+        if (visited[start]) continue;
+        const colorId = labels[start];
+        const pixels = [];
+        const queue = [start];
+        visited[start] = 1;
+        const neighborCounts = new Map();
+
+        while (queue.length) {
+          const idx = queue.pop();
+          const x = idx % width;
+          pixels.push(idx);
+
+          for (const d of dirs) {
+            const next = idx + d;
+            if (next < 0 || next >= labels.length) continue;
+            if (d === 1 && x === width - 1) continue;
+            if (d === -1 && x === 0) continue;
+
+            if (labels[next] === colorId) {
+              if (!visited[next]) {
+                visited[next] = 1;
+                queue.push(next);
+              }
+            } else {
+              const neighbor = labels[next];
+              neighborCounts.set(neighbor, (neighborCounts.get(neighbor) || 0) + 1);
+            }
+          }
+        }
+
+        if (pixels.length < minArea && neighborCounts.size > 0) {
+          let bestNeighbor = colorId;
+          let bestCount = -1;
+          for (const [neighbor, count] of neighborCounts) {
+            if (count > bestCount) {
+              bestCount = count;
+              bestNeighbor = neighbor;
+            }
+          }
+          for (const idx of pixels) result[idx] = bestNeighbor;
+        }
+      }
+
+      return { width, height, labels: result };
+    }
+
+    function simplifyLabelMap(labelMap) {
+      let simplified = modeFilterLabels(labelMap, 2, 2);
+      for (let i = 0; i < MERGE_PASSES; i++) {
+        simplified = mergeSmallRegions(simplified, MIN_REGION_AREA);
+        simplified = modeFilterLabels(simplified, 1, 1);
+      }
+      return simplified;
+    }
+
+    function upscaleLabelMap(labelMap, targetWidth, targetHeight) {
+      const { width, height, labels } = labelMap;
+      if (width === targetWidth && height === targetHeight) return labelMap;
+      const out = new Int32Array(targetWidth * targetHeight);
+      const scaleX = width / targetWidth;
+      const scaleY = height / targetHeight;
+      for (let y = 0; y < targetHeight; y++) {
+        for (let x = 0; x < targetWidth; x++) {
+          const sx = Math.min(width - 1, Math.floor(x * scaleX));
+          const sy = Math.min(height - 1, Math.floor(y * scaleY));
+          out[y * targetWidth + x] = labels[sy * width + sx];
+        }
+      }
+      return { width: targetWidth, height: targetHeight, labels: out };
+    }
+
+    function minLabelAreaForSize(width, height) {
+      return Math.max(900, Math.round((width * height) / 11000));
+    }
+
     function buildLabelMap(imageData, centroids) {
       const { width, height, data } = imageData;
       const labels = new Int32Array(width * height);
@@ -537,11 +669,15 @@
 
       await new Promise((resolve) => setTimeout(resolve, 30));
 
-      const imageData = resizeImage(sourceImage, MAX_SIZE);
-      const rawLabelMap = buildLabelMap(imageData, MASTER_PALETTE);
-      const { labelMap, palette } = compactUsedColors(rawLabelMap, MASTER_PALETTE);
-      const templateCanvas = drawTemplate(labelMap, palette, MIN_LABEL_AREA);
-      const referenceCanvas = drawReference(labelMap, palette);
+      const fullImageData = resizeImage(sourceImage, MAX_SIZE);
+      const segmentData = softenImageData(resizeImage(sourceImage, SEGMENT_SIZE));
+      let labelMap = buildLabelMap(segmentData, MASTER_PALETTE);
+      labelMap = simplifyLabelMap(labelMap);
+      labelMap = upscaleLabelMap(labelMap, fullImageData.width, fullImageData.height);
+      const { labelMap: compactMap, palette } = compactUsedColors(labelMap, MASTER_PALETTE);
+      const minLabelArea = minLabelAreaForSize(compactMap.width, compactMap.height);
+      const templateCanvas = drawTemplate(compactMap, palette, minLabelArea);
+      const referenceCanvas = drawReference(compactMap, palette);
       const paletteCanvas = drawPalette(palette);
       const printableCanvas = combineForPrint(templateCanvas, paletteCanvas);
 
