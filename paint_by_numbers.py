@@ -9,6 +9,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
+from scipy.ndimage import gaussian_filter, generic_filter, zoom
+
+SEGMENT_SIZE = 880
+MIN_REGION_AREA = 140
+MERGE_PASSES = 5
 
 
 def _rgb_to_hue(rgb: np.ndarray) -> float:
@@ -110,14 +115,113 @@ MASTER_PALETTE = np.array([
 ], dtype=np.uint8)
 
 
-def map_to_master_palette(image: Image.Image) -> tuple[np.ndarray, np.ndarray]:
-    palette = MASTER_PALETTE
+def _labels_from_image(image: Image.Image) -> np.ndarray:
     pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
     pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
-    palette_lab = _rgb_to_lab(palette.astype(np.float32))
+    palette_lab = _rgb_to_lab(MASTER_PALETTE.astype(np.float32))
     dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
-    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
-    return compact_used_colors(labels, palette)
+    return np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
+
+
+def _majority_filter(values: np.ndarray) -> float:
+    vals, counts = np.unique(values.astype(np.int32), return_counts=True)
+    return float(vals[np.argmax(counts)])
+
+
+def mode_filter_labels(labels: np.ndarray, passes: int = 1, size: int = 5) -> np.ndarray:
+    out = labels.copy()
+    for _ in range(passes):
+        out = generic_filter(out.astype(np.float64), _majority_filter, size=size).astype(np.int32)
+    return out
+
+
+def merge_small_regions(labels: np.ndarray, min_area: int) -> np.ndarray:
+    result = labels.copy()
+    h, w = labels.shape
+    visited = np.zeros(labels.shape, dtype=bool)
+    neighbors = ((1, 0), (-1, 0), (0, 1), (0, -1))
+
+    for y in range(h):
+        for x in range(w):
+            if visited[y, x]:
+                continue
+            color_id = labels[y, x]
+            stack = [(y, x)]
+            visited[y, x] = True
+            pixels: list[tuple[int, int]] = []
+            neighbor_counts: dict[int, int] = {}
+
+            while stack:
+                cy, cx = stack.pop()
+                pixels.append((cy, cx))
+                for dy, dx in neighbors:
+                    ny, nx = cy + dy, cx + dx
+                    if ny < 0 or ny >= h or nx < 0 or nx >= w:
+                        continue
+                    if labels[ny, nx] == color_id:
+                        if not visited[ny, nx]:
+                            visited[ny, nx] = True
+                            stack.append((ny, nx))
+                    else:
+                        neighbor = int(labels[ny, nx])
+                        neighbor_counts[neighbor] = neighbor_counts.get(neighbor, 0) + 1
+
+            if len(pixels) < min_area and neighbor_counts:
+                best_neighbor = max(neighbor_counts, key=neighbor_counts.get)
+                for cy, cx in pixels:
+                    result[cy, cx] = best_neighbor
+
+    return result
+
+
+def simplify_labels(labels: np.ndarray) -> np.ndarray:
+    simplified = mode_filter_labels(labels, passes=2, size=5)
+    for _ in range(MERGE_PASSES):
+        simplified = merge_small_regions(simplified, MIN_REGION_AREA)
+        simplified = mode_filter_labels(simplified, passes=1, size=3)
+    return simplified
+
+
+def soften_image(image: Image.Image) -> Image.Image:
+    arr = np.asarray(image.convert("RGB"), dtype=np.float32)
+    smoothed = gaussian_filter(arr, sigma=1.2, mode="nearest")
+    return Image.fromarray(np.clip(smoothed, 0, 255).astype(np.uint8))
+
+
+def resize_to_max(image: Image.Image, max_dimension: int) -> Image.Image:
+    scale = min(1.0, max_dimension / max(image.size))
+    if scale >= 1.0:
+        return image
+    return image.resize(
+        (int(image.width * scale), int(image.height * scale)),
+        Image.Resampling.LANCZOS,
+    )
+
+
+def upscale_labels(labels: np.ndarray, target_size: tuple[int, int]) -> np.ndarray:
+    target_w, target_h = target_size
+    if labels.shape[1] == target_w and labels.shape[0] == target_h:
+        return labels
+    factor_y = target_h / labels.shape[0]
+    factor_x = target_w / labels.shape[1]
+    return zoom(labels, (factor_y, factor_x), order=0).astype(np.int32)
+
+
+def min_label_area_for_size(width: int, height: int) -> int:
+    return max(900, int((width * height) / 11000))
+
+
+def map_to_master_palette(image: Image.Image, output_size: tuple[int, int] | None = None) -> tuple[np.ndarray, np.ndarray]:
+    full_image = image
+    if output_size is None:
+        output_size = (full_image.width, full_image.height)
+
+    segment_image = resize_to_max(full_image, SEGMENT_SIZE)
+    segment_image = soften_image(segment_image)
+    labels = _labels_from_image(segment_image)
+    labels = simplify_labels(labels)
+    labels = upscale_labels(labels, output_size)
+    return compact_used_colors(labels, MASTER_PALETTE)
 
 
 def quantize_colors(image: Image.Image, num_colors: int = 0) -> tuple[np.ndarray, np.ndarray]:
@@ -206,7 +310,7 @@ def generate_paint_by_numbers(
     input_path: Path,
     output_dir: Path,
     num_colors: int = 28,
-    min_label_area: int = 380,
+    min_label_area: int = 0,
     max_dimension: int = 1400,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -218,15 +322,11 @@ def generate_paint_by_numbers(
     except Exception:
         pass
     image = image.convert("RGB")
+    full_image = resize_to_max(image, max_dimension)
 
-    scale = min(1.0, max_dimension / max(image.size))
-    if scale < 1.0:
-        image = image.resize(
-            (int(image.width * scale), int(image.height * scale)),
-            Image.Resampling.LANCZOS,
-        )
-
-    labels, palette = quantize_colors(image, num_colors)
+    labels, palette = map_to_master_palette(full_image, (full_image.width, full_image.height))
+    if min_label_area <= 0:
+        min_label_area = min_label_area_for_size(full_image.width, full_image.height)
 
     template = create_outline(labels)
     draw_numbers(template, labels, min_label_area)
@@ -260,7 +360,7 @@ def main() -> None:
     parser.add_argument("input", type=Path, help="Source image path")
     parser.add_argument("-o", "--output-dir", type=Path, default=Path("paint-by-numbers"))
     parser.add_argument("--colors", type=int, default=28, help="Number of colors extracted from photo")
-    parser.add_argument("--min-label", type=int, default=380, help="Minimum area to show a number")
+    parser.add_argument("--min-label", type=int, default=0, help="Minimum area to show a number (0 = auto)")
     parser.add_argument("--max-size", type=int, default=1400, help="Max width/height")
     args = parser.parse_args()
 
@@ -268,7 +368,7 @@ def main() -> None:
         args.input,
         args.output_dir,
         num_colors=args.colors,
-        min_label_area=args.min_label,
+        min_label_area=args.min_label or 0,
         max_dimension=args.max_size,
     )
 
