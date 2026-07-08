@@ -21,9 +21,13 @@
       color: var(--text);
       line-height: 1.5;
     }
-    .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
     h1 { margin: 0 0 8px; font-size: 1.8rem; }
-    .lead { color: var(--muted); margin: 0 0 20px; }
+    .lead { color: var(--muted); margin: 0 0 24px; }
     .panel {
       background: var(--card);
       border: 1px solid var(--border);
@@ -35,35 +39,23 @@
     .dropzone {
       border: 2px dashed var(--border);
       border-radius: 12px;
-      padding: 32px 20px;
+      padding: 36px 20px;
       text-align: center;
       cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
     }
     .dropzone:hover, .dropzone.dragover {
       border-color: var(--accent);
       background: #eff6ff;
     }
-    .presets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
     }
-    .preset {
-      border: 1px solid var(--border);
-      background: white;
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-size: 0.95rem;
-    }
-    .preset.active {
-      border-color: var(--accent);
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-weight: 600;
-    }
-    .actions { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    label { display: block; font-size: 0.9rem; margin-bottom: 6px; color: var(--muted); }
+    input[type="range"] { width: 100%; }
     button {
       background: var(--accent);
       color: white;
@@ -74,8 +66,12 @@
       cursor: pointer;
     }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .status { color: var(--muted); font-size: 0.95rem; }
-    .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .downloads {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
     .downloads a {
       text-decoration: none;
       background: #eef2ff;
@@ -89,58 +85,58 @@
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 16px;
     }
-    .preview-card h3 { margin: 0 0 10px; font-size: 1rem; }
-    canvas {
+    .preview-card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+    canvas, img {
       width: 100%;
       height: auto;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: white;
     }
+    .status { margin-top: 12px; color: var(--muted); min-height: 1.5em; }
     .hidden { display: none; }
-    .tip {
-      margin: 0 0 14px;
-      padding: 12px 14px;
-      background: #f0fdf4;
-      border-radius: 10px;
-      color: #166534;
-      font-size: 0.95rem;
-    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Картина по номерам</h1>
-    <p class="lead">Загрузите фото — получите шаблон, цветной образец и палитру. Цвета берутся из снимка без «кислотной» обработки.</p>
+    <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
+      <p class="tip">Режим с максимальной детализацией сохраняет черты лица. Цвета берутся из фото без искусственной обработки.</p>
       <div class="dropzone" id="dropzone">
-        <strong>Нажмите или перетащите фото</strong>
+        <strong>Перетащите фото сюда</strong><br>
+        или нажмите, чтобы выбрать файл
       </div>
       <input class="hidden" id="fileInput" type="file" accept="image/*">
 
-      <p class="tip" style="margin-top:16px;">Для фото с людьми выберите режим <strong>Портрет</strong> — лицо останется узнаваемым.</p>
-
-      <div class="presets" id="presets">
-        <button type="button" class="preset active" data-preset="portrait">Портрет</button>
-        <button type="button" class="preset" data-preset="balanced">Универсальный</button>
-        <button type="button" class="preset" data-preset="simple">Простой</button>
+      <div class="controls">
+        <div>
+          <label for="colors">Количество цветов: <span id="colorsValue">24</span></label>
+          <input id="colors" type="range" min="12" max="36" value="24">
+        </div>
+        <div>
+          <label for="detail">Детализация: <span id="detailValue">высокая</span></label>
+          <input id="detail" type="range" min="1" max="3" value="3">
+        </div>
+        <div style="display:flex; align-items:end;">
+          <button id="generateBtn" disabled>Создать картину</button>
+        </div>
       </div>
-
-      <div class="actions">
-        <button id="generateBtn" disabled>Создать картину</button>
-        <span class="status" id="status"></span>
-      </div>
+      <div class="status" id="status"></div>
       <div class="downloads hidden" id="downloads"></div>
     </div>
 
     <div class="preview-grid hidden" id="previews">
       <div class="preview-card">
-        <h3>Шаблон</h3>
+        <h3>Шаблон для раскрашивания</h3>
         <canvas id="templateCanvas"></canvas>
       </div>
       <div class="preview-card">
-        <h3>Образец</h3>
+        <h3>Цветной образец</h3>
         <canvas id="referenceCanvas"></canvas>
       </div>
       <div class="preview-card">
@@ -155,115 +151,129 @@
   </div>
 
   <script>
-    const PRESETS = {
-      portrait: { colors: 20, block: 3, minLabel: 900, maxSize: 1100 },
-      balanced: { colors: 18, block: 4, minLabel: 1200, maxSize: 1000 },
-      simple: { colors: 15, block: 5, minLabel: 1600, maxSize: 900 },
-    };
-
     const fileInput = document.getElementById("fileInput");
     const dropzone = document.getElementById("dropzone");
     const generateBtn = document.getElementById("generateBtn");
     const statusEl = document.getElementById("status");
     const downloadsEl = document.getElementById("downloads");
     const previewsEl = document.getElementById("previews");
-    const presetButtons = document.querySelectorAll(".preset");
+    const colorsInput = document.getElementById("colors");
+    const detailInput = document.getElementById("detail");
+    const colorsValue = document.getElementById("colorsValue");
+    const detailValue = document.getElementById("detailValue");
 
     let sourceImage = null;
-    let currentPreset = "portrait";
 
-    presetButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        presetButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentPreset = btn.dataset.preset;
-      });
+    const detailLabels = ["низкая", "средняя", "высокая"];
+
+    colorsInput.addEventListener("input", () => {
+      colorsValue.textContent = colorsInput.value;
+    });
+    detailInput.addEventListener("input", () => {
+      detailValue.textContent = detailLabels[detailInput.value - 1];
     });
 
     dropzone.addEventListener("click", () => fileInput.click());
-    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
     dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
     dropzone.addEventListener("drop", (e) => {
       e.preventDefault();
       dropzone.classList.remove("dragover");
       if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
     });
-    fileInput.addEventListener("change", () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) loadFile(fileInput.files[0]);
+    });
     generateBtn.addEventListener("click", generate);
 
-    async function loadFile(file) {
-      try {
-        const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-        const canvas = document.createElement("canvas");
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        canvas.getContext("2d").drawImage(bitmap, 0, 0);
-        sourceImage = await loadImage(canvas.toDataURL("image/jpeg", 0.92));
-      } catch {
-        sourceImage = await loadImage(URL.createObjectURL(file));
-      }
-      generateBtn.disabled = false;
-      statusEl.textContent = `Загружено: ${file.name}`;
+    function loadFile(file) {
+      (async () => {
+        try {
+          const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+          const canvas = document.createElement("canvas");
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          canvas.getContext("2d").drawImage(bitmap, 0, 0);
+          const img = new Image();
+          img.onload = () => {
+            sourceImage = img;
+            generateBtn.disabled = false;
+            statusEl.textContent = `Загружено: ${file.name} (${img.width}×${img.height})`;
+          };
+          img.src = canvas.toDataURL("image/jpeg", 0.92);
+        } catch {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              sourceImage = img;
+              generateBtn.disabled = false;
+              statusEl.textContent = `Загружено: ${file.name} (${img.width}×${img.height})`;
+            };
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      })();
     }
 
-    function loadImage(src) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-      });
-    }
-
-    function fitCanvas(img, maxSize) {
+    function resizeImage(img, maxSize) {
       const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(img.width * scale));
-      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      return canvas;
+      ctx.drawImage(img, 0, 0, width, height);
+      return ctx.getImageData(0, 0, width, height);
     }
 
-    function rgbToLab(r, g, b) {
-      let rr = r / 255, gg = g / 255, bb = b / 255;
-      rr = rr > 0.04045 ? ((rr + 0.055) / 1.055) ** 2.4 : rr / 12.92;
-      gg = gg > 0.04045 ? ((gg + 0.055) / 1.055) ** 2.4 : gg / 12.92;
-      bb = bb > 0.04045 ? ((bb + 0.055) / 1.055) ** 2.4 : bb / 12.92;
-      const x = (rr * 0.4124 + gg * 0.3576 + bb * 0.1805) / 0.95047;
-      const y = (rr * 0.2126 + gg * 0.7152 + bb * 0.0722) / 1.0;
-      const z = (rr * 0.0193 + gg * 0.1192 + bb * 0.9505) / 1.08883;
-      const fx = x > 0.008856 ? x ** (1 / 3) : 7.787 * x + 16 / 116;
-      const fy = y > 0.008856 ? y ** (1 / 3) : 7.787 * y + 16 / 116;
-      const fz = z > 0.008856 ? z ** (1 / 3) : 7.787 * z + 16 / 116;
-      return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+    function rgbDist(a, b) {
+      const dr = a[0] - b[0];
+      const dg = a[1] - b[1];
+      const db = a[2] - b[2];
+      return dr * dr + dg * dg + db * db;
     }
 
-    function labDist(a, b) {
-      const la = rgbToLab(a[0], a[1], a[2]);
-      const lb = rgbToLab(b[0], b[1], b[2]);
-      const dl = la[0] - lb[0], da = la[1] - lb[1], db = la[2] - lb[2];
-      return dl * dl + da * da + db * db;
-    }
-
-    function kmeans(pixels, k) {
+    function kmeans(pixels, k, iterations = 12) {
       const centroids = [];
-      const step = Math.max(1, Math.floor(pixels.length / k));
-      for (let i = 0; i < k; i++) centroids.push(pixels[Math.min(pixels.length - 1, i * step)].slice());
-      for (let iter = 0; iter < 16; iter++) {
-        const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
-        for (const px of pixels) {
-          let best = 0, bestD = Infinity;
-          for (let c = 0; c < k; c++) {
-            const d = labDist(px, centroids[c]);
-            if (d < bestD) { bestD = d; best = c; }
+      const used = new Set();
+      while (centroids.length < k) {
+        const idx = Math.floor(Math.random() * pixels.length);
+        if (used.has(idx)) continue;
+        used.add(idx);
+        centroids.push(pixels[idx].slice());
+      }
+
+      const labels = new Array(pixels.length).fill(0);
+      for (let iter = 0; iter < iterations; iter++) {
+        for (let i = 0; i < pixels.length; i++) {
+          let best = 0;
+          let bestDist = Infinity;
+          for (let c = 0; c < centroids.length; c++) {
+            const d = rgbDist(pixels[i], centroids[c]);
+            if (d < bestDist) {
+              bestDist = d;
+              best = c;
+            }
           }
-          sums[best][0] += px[0]; sums[best][1] += px[1]; sums[best][2] += px[2]; sums[best][3]++;
+          labels[i] = best;
+        }
+
+        const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
+        for (let i = 0; i < pixels.length; i++) {
+          const l = labels[i];
+          sums[l][0] += pixels[i][0];
+          sums[l][1] += pixels[i][1];
+          sums[l][2] += pixels[i][2];
+          sums[l][3] += 1;
         }
         for (let c = 0; c < k; c++) {
-          if (!sums[c][3]) continue;
+          if (sums[c][3] === 0) continue;
           centroids[c] = [
             Math.round(sums[c][0] / sums[c][3]),
             Math.round(sums[c][1] / sums[c][3]),
@@ -271,194 +281,236 @@
           ];
         }
       }
-      return centroids;
+
+      return { centroids, labels };
     }
 
-    function segment(canvas, settings) {
-      const block = settings.block;
-      const sw = Math.max(48, Math.round(canvas.width / block));
-      const sh = Math.max(48, Math.round(canvas.height / block));
-      const small = document.createElement("canvas");
-      small.width = sw;
-      small.height = sh;
-      const sctx = small.getContext("2d");
-      sctx.imageSmoothingEnabled = true;
-      sctx.imageSmoothingQuality = "high";
-      sctx.drawImage(canvas, 0, 0, sw, sh);
-      const data = sctx.getImageData(0, 0, sw, sh).data;
-
-      const pixels = [];
-      for (let i = 0; i < data.length; i += 4) {
-        pixels.push([data[i], data[i + 1], data[i + 2]]);
+    function nearestCentroid(rgb, centroids) {
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < centroids.length; i++) {
+        const d = rgbDist(rgb, centroids[i]);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
       }
-      const centroids = kmeans(pixels, settings.colors);
-      const labels = new Int32Array(sw * sh);
+      return best;
+    }
+
+    function buildLabelMap(imageData, centroids) {
+      const { width, height, data } = imageData;
+      const labels = new Int32Array(width * height);
       for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-        const px = [data[i], data[i + 1], data[i + 2]];
-        let best = 0, bestD = Infinity;
-        for (let c = 0; c < centroids.length; c++) {
-          const d = labDist(px, centroids[c]);
-          if (d < bestD) { bestD = d; best = c; }
-        }
-        labels[p] = best;
+        labels[p] = nearestCentroid([data[i], data[i + 1], data[i + 2]], centroids);
       }
-
-      const fullLabels = new Int32Array(canvas.width * canvas.height);
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-          const sx = Math.min(sw - 1, Math.floor(x * sw / canvas.width));
-          const sy = Math.min(sh - 1, Math.floor(y * sh / canvas.height));
-          fullLabels[y * canvas.width + x] = labels[sy * sw + sx];
-        }
-      }
-      return { width: canvas.width, height: canvas.height, labels: fullLabels, centroids };
+      return { width, height, labels };
     }
 
-    function connectedParts(labels, width, height, colorId) {
-      const seen = new Uint8Array(labels.length);
-      const parts = [];
-      const q = [];
-      for (let i = 0; i < labels.length; i++) {
-        if (seen[i] || labels[i] !== colorId) continue;
-        seen[i] = 1;
-        q.length = 0;
-        q.push(i);
-        let size = 0, sx = 0, sy = 0;
-        while (q.length) {
-          const idx = q.pop();
-          const x = idx % width, y = (idx / width) | 0;
-          size++; sx += x; sy += y;
-          const n = [idx - 1, idx + 1, idx - width, idx + width];
-          for (const next of n) {
+    function connectedComponents(labels, width, height, colorId) {
+      const visited = new Uint8Array(labels.length);
+      const components = [];
+      const dirs = [1, -1, width, -width];
+
+      for (let start = 0; start < labels.length; start++) {
+        if (labels[start] !== colorId || visited[start]) continue;
+        const queue = [start];
+        visited[start] = 1;
+        let sumX = 0;
+        let sumY = 0;
+        let size = 0;
+
+        while (queue.length) {
+          const idx = queue.pop();
+          const x = idx % width;
+          const y = (idx / width) | 0;
+          sumX += x;
+          sumY += y;
+          size += 1;
+
+          for (const d of dirs) {
+            const next = idx + d;
             if (next < 0 || next >= labels.length) continue;
-            if (seen[next] || labels[next] !== colorId) continue;
-            if (next === idx - 1 && x === 0) continue;
-            if (next === idx + 1 && x === width - 1) continue;
-            seen[next] = 1;
-            q.push(next);
+            if (visited[next] || labels[next] !== colorId) continue;
+            if (d === 1 && x === width - 1) continue;
+            if (d === -1 && x === 0) continue;
+            visited[next] = 1;
+            queue.push(next);
           }
         }
-        parts.push({ size, cx: sx / size, cy: sy / size });
+
+        components.push({
+          size,
+          cx: sumX / size,
+          cy: sumY / size,
+        });
       }
-      return parts;
+      return components;
     }
 
-    function renderTemplate(map, minLabel) {
-      const { width, height, labels } = map;
+    function drawTemplate(labelMap, centroids, minLabelArea) {
+      const { width, height, labels } = labelMap;
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      const img = ctx.createImageData(width, height);
+      const imageData = ctx.createImageData(width, height);
+
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const idx = y * width + x;
-          const edge = (x > 0 && labels[idx] !== labels[idx - 1]) || (y > 0 && labels[idx] !== labels[idx - width]);
+          const edge =
+            (x > 0 && labels[idx] !== labels[idx - 1]) ||
+            (y > 0 && labels[idx] !== labels[idx - width]);
           const p = idx * 4;
-          const v = edge ? 25 : 255;
-          img.data[p] = v; img.data[p + 1] = v; img.data[p + 2] = v; img.data[p + 3] = 255;
+          const color = edge ? 25 : 255;
+          imageData.data[p] = color;
+          imageData.data[p + 1] = color;
+          imageData.data[p + 2] = color;
+          imageData.data[p + 3] = 255;
         }
       }
-      ctx.putImageData(img, 0, 0);
+      ctx.putImageData(imageData, 0, 0);
+
       ctx.fillStyle = "#111";
-      ctx.font = `bold ${Math.max(10, Math.round(width / 60))}px sans-serif`;
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 2;
+      ctx.font = `bold ${Math.max(10, Math.round(width / 55))}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      for (let c = 0; c < map.centroids.length; c++) {
-        for (const part of connectedParts(labels, width, height, c)) {
-          if (part.size < minLabel) continue;
-          ctx.fillText(String(c + 1), part.cx, part.cy);
+
+      for (let colorId = 0; colorId < centroids.length; colorId++) {
+        const parts = connectedComponents(labels, width, height, colorId);
+        for (const part of parts) {
+          if (part.size < minLabelArea) continue;
+          const text = String(colorId + 1);
+          ctx.strokeText(text, part.cx, part.cy);
+          ctx.fillText(text, part.cx, part.cy);
         }
       }
+
       return canvas;
     }
 
-    function renderReference(map) {
-      const { width, height, labels, centroids } = map;
+    function drawReference(labelMap, centroids) {
+      const { width, height, labels } = labelMap;
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      const img = ctx.createImageData(width, height);
+      const imageData = ctx.createImageData(width, height);
       for (let i = 0; i < labels.length; i++) {
         const rgb = centroids[labels[i]];
         const p = i * 4;
-        img.data[p] = rgb[0]; img.data[p + 1] = rgb[1]; img.data[p + 2] = rgb[2]; img.data[p + 3] = 255;
+        imageData.data[p] = rgb[0];
+        imageData.data[p + 1] = rgb[1];
+        imageData.data[p + 2] = rgb[2];
+        imageData.data[p + 3] = 255;
       }
-      ctx.putImageData(img, 0, 0);
+      ctx.putImageData(imageData, 0, 0);
       return canvas;
     }
 
-    function renderPalette(centroids) {
-      const cols = 4, sw = 48, rows = Math.ceil(centroids.length / cols);
+    function drawPalette(centroids) {
+      const columns = 4;
+      const swatch = 52;
+      const rows = Math.ceil(centroids.length / columns);
+      const width = 520;
+      const height = rows * (swatch + 36) + 56;
       const canvas = document.createElement("canvas");
-      canvas.width = 480;
-      canvas.height = rows * (sw + 30) + 44;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, width, height);
       ctx.fillStyle = "#111";
-      ctx.font = "bold 20px sans-serif";
-      ctx.fillText("Палитра цветов", 16, 26);
-      ctx.font = "bold 15px sans-serif";
-      centroids.forEach((rgb, i) => {
-        const col = i % cols, row = Math.floor(i / cols);
-        const x = 16 + col * 118, y = 40 + row * (sw + 30);
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText("Палитра цветов", 20, 34);
+      ctx.font = "bold 18px sans-serif";
+
+      const colWidth = width / columns;
+      centroids.forEach((rgb, index) => {
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        const x = 20 + col * colWidth;
+        const y = 52 + row * (swatch + 36);
         ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-        ctx.fillRect(x, y, sw, sw);
+        ctx.fillRect(x, y, swatch, swatch);
         ctx.strokeStyle = "#222";
-        ctx.strokeRect(x, y, sw, sw);
+        ctx.strokeRect(x, y, swatch, swatch);
         ctx.fillStyle = "#111";
-        ctx.fillText(`№ ${i + 1}`, x, y + sw + 18);
+        ctx.fillText(`№ ${index + 1}`, x, y + swatch + 22);
       });
       return canvas;
     }
 
-    function showCanvas(id, src) {
-      const c = document.getElementById(id);
-      c.width = src.width;
-      c.height = src.height;
-      c.getContext("2d").drawImage(src, 0, 0);
+    function combineForPrint(templateCanvas, paletteCanvas) {
+      const canvas = document.createElement("canvas");
+      canvas.width = templateCanvas.width;
+      canvas.height = templateCanvas.height + paletteCanvas.height + 20;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(templateCanvas, 0, 0);
+      ctx.drawImage(paletteCanvas, 0, templateCanvas.height + 20);
+      return canvas;
+    }
+
+    function showCanvas(targetId, sourceCanvas) {
+      const target = document.getElementById(targetId);
+      target.width = sourceCanvas.width;
+      target.height = sourceCanvas.height;
+      target.getContext("2d").drawImage(sourceCanvas, 0, 0);
+    }
+
+    function addDownload(canvas, name) {
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = name;
+      link.textContent = name;
+      downloadsEl.appendChild(link);
     }
 
     async function generate() {
       if (!sourceImage) return;
       generateBtn.disabled = true;
-      statusEl.textContent = "Создаём…";
-      await new Promise((r) => setTimeout(r, 20));
+      statusEl.textContent = "Создаём картину по номерам…";
 
-      const settings = PRESETS[currentPreset];
-      const canvas = fitCanvas(sourceImage, settings.maxSize);
-      const map = segment(canvas, settings);
-      const template = renderTemplate(map, settings.minLabel);
-      const reference = renderReference(map);
-      const palette = renderPalette(map.centroids);
-      const printable = document.createElement("canvas");
-      printable.width = template.width;
-      printable.height = template.height + palette.height + 12;
-      const pctx = printable.getContext("2d");
-      pctx.fillStyle = "#fff";
-      pctx.fillRect(0, 0, printable.width, printable.height);
-      pctx.drawImage(template, 0, 0);
-      pctx.drawImage(palette, 0, template.height + 12);
+      await new Promise((resolve) => setTimeout(resolve, 30));
 
-      showCanvas("templateCanvas", template);
-      showCanvas("referenceCanvas", reference);
-      showCanvas("paletteCanvas", palette);
-      showCanvas("printableCanvas", printable);
+      const colors = Number(colorsInput.value);
+      const detail = Number(detailInput.value);
+      const maxSize = detail === 1 ? 900 : detail === 2 ? 1100 : 1300;
+      const minLabelArea = detail === 1 ? 1800 : detail === 2 ? 1000 : 600;
+      const sampleStep = detail === 1 ? 6 : detail === 2 ? 4 : 3;
+
+      const imageData = resizeImage(sourceImage, maxSize);
+      const pixels = [];
+      for (let i = 0; i < imageData.data.length; i += 4 * sampleStep) {
+        pixels.push([imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]]);
+      }
+
+      const { centroids } = kmeans(pixels, colors);
+      const labelMap = buildLabelMap(imageData, centroids);
+      const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
+      const referenceCanvas = drawReference(labelMap, centroids);
+      const paletteCanvas = drawPalette(centroids);
+      const printableCanvas = combineForPrint(templateCanvas, paletteCanvas);
+
+      showCanvas("templateCanvas", templateCanvas);
+      showCanvas("referenceCanvas", referenceCanvas);
+      showCanvas("paletteCanvas", paletteCanvas);
+      showCanvas("printableCanvas", printableCanvas);
 
       downloadsEl.innerHTML = "";
-      for (const [name, node] of [["template.png", template], ["reference.png", reference], ["palette.png", palette], ["printable.png", printable]]) {
-        const a = document.createElement("a");
-        a.href = node.toDataURL("image/png");
-        a.download = name;
-        a.textContent = name;
-        downloadsEl.appendChild(a);
-      }
+      addDownload(templateCanvas, "template.png");
+      addDownload(referenceCanvas, "reference.png");
+      addDownload(paletteCanvas, "palette.png");
+      addDownload(printableCanvas, "printable.png");
 
       previewsEl.classList.remove("hidden");
       downloadsEl.classList.remove("hidden");
-      statusEl.textContent = "Готово";
+      statusEl.textContent = "Готово! Скачайте файлы или распечатайте printable.png";
       generateBtn.disabled = false;
     }
   </script>
