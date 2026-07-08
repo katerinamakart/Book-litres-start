@@ -97,6 +97,44 @@
       background: white;
     }
     .status { margin-top: 12px; color: var(--muted); min-height: 1.5em; }
+    .tip {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      background: #eff6ff;
+      border-radius: 10px;
+      color: #1e3a8a;
+      font-size: 0.95rem;
+    }
+    .tune-panel {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .tune-panel h2 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+    }
+    .tune-hint {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .tune-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .tune-actions button.secondary {
+      background: #eef2ff;
+      color: #1e40af;
+    }
+    .reference-wrap {
+      position: relative;
+    }
+    .reference-wrap canvas {
+      display: block;
+    }
     .hidden { display: none; }
   </style>
 </head>
@@ -128,6 +166,33 @@
       </div>
       <div class="status" id="status"></div>
       <div class="downloads hidden" id="downloads"></div>
+
+      <div class="tune-panel hidden" id="tunePanel">
+        <h2>Настройка цветов</h2>
+        <p class="tune-hint">Двигайте ползунки — образец и палитра обновляются сразу. Так можно подобрать акварельный оттенок до раскрашивания.</p>
+        <div class="controls">
+          <div>
+            <label for="brightness">Яркость: <span id="brightnessValue">0</span></label>
+            <input id="brightness" type="range" min="-40" max="40" value="0">
+          </div>
+          <div>
+            <label for="saturation">Насыщенность: <span id="saturationValue">0</span></label>
+            <input id="saturation" type="range" min="-50" max="50" value="0">
+          </div>
+          <div>
+            <label for="hue">Оттенок: <span id="hueValue">0</span>°</label>
+            <input id="hue" type="range" min="-30" max="30" value="0">
+          </div>
+          <div>
+            <label for="watercolor">Акварель: <span id="watercolorValue">0</span>%</label>
+            <input id="watercolor" type="range" min="0" max="100" value="0">
+          </div>
+        </div>
+        <div class="tune-actions">
+          <button type="button" class="secondary" id="presetWatercolorBtn">Пресет «Акварель»</button>
+          <button type="button" class="secondary" id="resetTuneBtn">Сбросить цвета</button>
+        </div>
+      </div>
     </div>
 
     <div class="preview-grid hidden" id="previews">
@@ -137,7 +202,9 @@
       </div>
       <div class="preview-card">
         <h3>Цветной образец</h3>
-        <canvas id="referenceCanvas"></canvas>
+        <div class="reference-wrap">
+          <canvas id="referenceCanvas"></canvas>
+        </div>
       </div>
       <div class="preview-card">
         <h3>Палитра</h3>
@@ -161,10 +228,23 @@
     const detailInput = document.getElementById("detail");
     const colorsValue = document.getElementById("colorsValue");
     const detailValue = document.getElementById("detailValue");
+    const tunePanel = document.getElementById("tunePanel");
+    const brightnessInput = document.getElementById("brightness");
+    const saturationInput = document.getElementById("saturation");
+    const hueInput = document.getElementById("hue");
+    const watercolorInput = document.getElementById("watercolor");
+    const brightnessValue = document.getElementById("brightnessValue");
+    const saturationValue = document.getElementById("saturationValue");
+    const hueValue = document.getElementById("hueValue");
+    const watercolorValue = document.getElementById("watercolorValue");
+    const presetWatercolorBtn = document.getElementById("presetWatercolorBtn");
+    const resetTuneBtn = document.getElementById("resetTuneBtn");
 
     let sourceImage = null;
+    let paintState = null;
 
     const detailLabels = ["низкая", "средняя", "высокая"];
+    const tuneInputs = [brightnessInput, saturationInput, hueInput, watercolorInput];
 
     colorsInput.addEventListener("input", () => {
       colorsValue.textContent = colorsInput.value;
@@ -172,6 +252,9 @@
     detailInput.addEventListener("input", () => {
       detailValue.textContent = detailLabels[detailInput.value - 1];
     });
+    tuneInputs.forEach((input) => input.addEventListener("input", onTuneChange));
+    presetWatercolorBtn.addEventListener("click", applyWatercolorPreset);
+    resetTuneBtn.addEventListener("click", resetTune);
 
     dropzone.addEventListener("click", () => fileInput.click());
     dropzone.addEventListener("dragover", (e) => {
@@ -230,6 +313,169 @@
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
       return ctx.getImageData(0, 0, width, height);
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      if (max === min) return [0, 0, l];
+      const d = max - min;
+      const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      let h;
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        default: h = ((r - g) / d + 4) / 6; break;
+      }
+      return [h * 360, s, l];
+    }
+
+    function hslToRgb(h, s, l) {
+      h = ((h % 360) + 360) % 360;
+      h /= 360;
+      if (s === 0) {
+        const v = Math.round(l * 255);
+        return [v, v, v];
+      }
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      return [
+        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
+        Math.round(hue2rgb(p, q, h) * 255),
+        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
+      ];
+    }
+
+    function clamp(v, min, max) {
+      return Math.min(max, Math.max(min, v));
+    }
+
+    function getTuneSettings() {
+      return {
+        brightness: Number(brightnessInput.value),
+        saturation: Number(saturationInput.value),
+        hue: Number(hueInput.value),
+        watercolor: Number(watercolorInput.value),
+      };
+    }
+
+    function updateTuneLabels() {
+      brightnessValue.textContent = brightnessInput.value;
+      saturationValue.textContent = saturationInput.value;
+      hueValue.textContent = hueInput.value;
+      watercolorValue.textContent = watercolorInput.value;
+    }
+
+    function adjustPaletteColor(rgb, tune) {
+      let [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+      l = clamp(l + tune.brightness / 100, 0.04, 0.98);
+      s = clamp(s * (1 + tune.saturation / 100), 0, 1);
+      h = h + tune.hue;
+
+      if (tune.watercolor > 0) {
+        const w = tune.watercolor / 100;
+        s = clamp(s * (1 - w * 0.45) + 0.06 * w, 0, 1);
+        l = clamp(l * (1 - w * 0.08) + 0.05 * w, 0, 1);
+        h = h + w * 4;
+      }
+
+      let [r, g, b] = hslToRgb(h, s, l);
+      if (tune.watercolor > 0) {
+        const w = tune.watercolor / 100;
+        r = Math.round(r * (1 - w * 0.12) + 255 * 0.12 * w);
+        g = Math.round(g * (1 - w * 0.1) + 248 * 0.1 * w);
+        b = Math.round(b * (1 - w * 0.08) + 240 * 0.08 * w);
+      }
+      return [
+        clamp(Math.round(r), 0, 255),
+        clamp(Math.round(g), 0, 255),
+        clamp(Math.round(b), 0, 255),
+      ];
+    }
+
+    function buildAdjustedPalette(baseCentroids, tune) {
+      return baseCentroids.map((rgb) => adjustPaletteColor(rgb, tune));
+    }
+
+    function drawReferenceWatercolor(labelMap, centroids, tune) {
+      const flat = drawReference(labelMap, centroids);
+      if (tune.watercolor < 8) return flat;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = flat.width;
+      canvas.height = flat.height;
+      const ctx = canvas.getContext("2d");
+      const blur = tune.watercolor * 0.14;
+
+      ctx.filter = `blur(${blur}px) saturate(${100 + tune.saturation * 0.5}%)`;
+      ctx.drawImage(flat, 0, 0);
+      ctx.filter = "none";
+
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(flat, 0, 0);
+      ctx.globalAlpha = 1;
+
+      ctx.globalCompositeOperation = "soft-light";
+      ctx.globalAlpha = tune.watercolor / 220;
+      ctx.fillStyle = "#fff6e8";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+
+      return canvas;
+    }
+
+    function resetTune() {
+      brightnessInput.value = 0;
+      saturationInput.value = 0;
+      hueInput.value = 0;
+      watercolorInput.value = 0;
+      updateTuneLabels();
+      onTuneChange();
+    }
+
+    function applyWatercolorPreset() {
+      brightnessInput.value = 8;
+      saturationInput.value = -15;
+      hueInput.value = 4;
+      watercolorInput.value = 55;
+      updateTuneLabels();
+      onTuneChange();
+    }
+
+    function onTuneChange() {
+      if (!paintState) return;
+      updateTuneLabels();
+      renderAdjustedOutputs();
+    }
+
+    function renderAdjustedOutputs() {
+      const tune = getTuneSettings();
+      const centroids = buildAdjustedPalette(paintState.baseCentroids, tune);
+      const referenceCanvas = drawReferenceWatercolor(paintState.labelMap, centroids, tune);
+      const paletteCanvas = drawPalette(centroids);
+      const printableCanvas = combineForPrint(paintState.templateCanvas, paletteCanvas);
+
+      showCanvas("referenceCanvas", referenceCanvas);
+      showCanvas("paletteCanvas", paletteCanvas);
+      showCanvas("printableCanvas", printableCanvas);
+
+      downloadsEl.innerHTML = "";
+      addDownload(paintState.templateCanvas, "template.png");
+      addDownload(referenceCanvas, "reference.png");
+      addDownload(paletteCanvas, "palette.png");
+      addDownload(printableCanvas, "printable.png");
+
+      paintState.currentCentroids = centroids;
     }
 
     function rgbDist(a, b) {
@@ -493,24 +739,21 @@
       const { centroids } = kmeans(pixels, colors);
       const labelMap = buildLabelMap(imageData, centroids);
       const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
-      const referenceCanvas = drawReference(labelMap, centroids);
-      const paletteCanvas = drawPalette(centroids);
-      const printableCanvas = combineForPrint(templateCanvas, paletteCanvas);
 
+      paintState = {
+        labelMap,
+        baseCentroids: centroids.map((c) => c.slice()),
+        templateCanvas,
+      };
+
+      resetTune();
       showCanvas("templateCanvas", templateCanvas);
-      showCanvas("referenceCanvas", referenceCanvas);
-      showCanvas("paletteCanvas", paletteCanvas);
-      showCanvas("printableCanvas", printableCanvas);
-
-      downloadsEl.innerHTML = "";
-      addDownload(templateCanvas, "template.png");
-      addDownload(referenceCanvas, "reference.png");
-      addDownload(paletteCanvas, "palette.png");
-      addDownload(printableCanvas, "printable.png");
+      renderAdjustedOutputs();
 
       previewsEl.classList.remove("hidden");
       downloadsEl.classList.remove("hidden");
-      statusEl.textContent = "Готово! Скачайте файлы или распечатайте printable.png";
+      tunePanel.classList.remove("hidden");
+      statusEl.textContent = "Готово! Настройте цвета ниже или скачайте файлы.";
       generateBtn.disabled = false;
     }
   </script>
