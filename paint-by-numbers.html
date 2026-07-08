@@ -109,7 +109,7 @@
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
-      <p class="tip">Фон упрощается для удобной раскраски. На лицах — до 18 оттенков прямо с фото, без слияния в одно пятно.</p>
+      <p class="tip">Фон упрощается. На лицах — много оттенков с фото, отдельно выделяются глаза, брови и рот.</p>
       <div class="dropzone" id="dropzone">
         <strong>Перетащите фото сюда</strong><br>
         или нажмите, чтобы выбрать файл
@@ -153,11 +153,8 @@
 
     const MAX_SIZE = 1400;
     const SEGMENT_SIZE = 880;
-    const FACE_DETAIL_SIZE = 1200;
-    const MIN_REGION_AREA = 140;
-    const MERGE_PASSES = 5;
-    const FACE_COLORS_MIN = 10;
-    const FACE_COLORS_MAX = 18;
+    const FACE_COLORS_MIN = 24;
+    const FACE_COLORS_MAX = 48;
 
     // Палитра из референсов: гжель, слоник, цветы, бабочка, яблоня, пионы
     const MASTER_PALETTE = [
@@ -471,10 +468,10 @@
           return faces.map((face) => {
             const box = face.boundingBox;
             return {
-              x: Math.max(0, (box.x - box.width * 0.18) * scaleX),
-              y: Math.max(0, (box.y - box.height * 0.22) * scaleY),
-              w: Math.min(targetWidth, box.width * 1.36 * scaleX),
-              h: Math.min(targetHeight, box.height * 1.38 * scaleY),
+              x: Math.max(0, (box.x - box.width * 0.22) * scaleX),
+              y: Math.max(0, (box.y - box.height * 0.26) * scaleY),
+              w: Math.min(targetWidth, box.width * 1.55 * scaleX),
+              h: Math.min(targetHeight, box.height * 1.58 * scaleY),
             };
           });
         } catch {
@@ -507,17 +504,179 @@
       return out;
     }
 
-    function kmeansFromPixels(pixels, k) {
-      const centroids = [];
-      const used = new Set();
-      while (centroids.length < k) {
-        const idx = Math.floor(Math.random() * pixels.length);
-        if (used.has(idx)) continue;
-        used.add(idx);
-        centroids.push(pixels[idx].slice());
+    function pixelLuminance(r, g, b) {
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+
+    function localMeanLuminance(data, width, height, x, y, radius) {
+      let sum = 0;
+      let count = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          const i = (ny * width + nx) * 4;
+          sum += pixelLuminance(data[i], data[i + 1], data[i + 2]);
+          count++;
+        }
+      }
+      return count ? sum / count : 0;
+    }
+
+    function splitMaskComponents(mask, width, height) {
+      const components = [];
+      const visited = new Uint8Array(mask.length);
+      const dirs = [1, -1, width, -width];
+
+      for (let start = 0; start < mask.length; start++) {
+        if (!mask[start] || visited[start]) continue;
+        const pixels = [];
+        const queue = [start];
+        visited[start] = 1;
+        let minX = width;
+        let minY = height;
+        let maxX = 0;
+        let maxY = 0;
+
+        while (queue.length) {
+          const idx = queue.pop();
+          const x = idx % width;
+          const y = (idx / width) | 0;
+          pixels.push(idx);
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+          for (const d of dirs) {
+            const next = idx + d;
+            if (next < 0 || next >= mask.length) continue;
+            if (d === 1 && x === width - 1) continue;
+            if (d === -1 && x === 0) continue;
+            if (mask[next] && !visited[next]) {
+              visited[next] = 1;
+              queue.push(next);
+            }
+          }
+        }
+
+        components.push({ pixels, minX, minY, maxX, maxY });
+      }
+      return components;
+    }
+
+    function classifyFaceFeature(rgb, lum, contrast, relY, relX, faceMedianLum) {
+      const [r, g, b] = rgb;
+      const eyeZone = relY >= 0.16 && relY < 0.54;
+      const mouthZone = relY >= 0.54 && relY < 0.9;
+      const noseZone = relY >= 0.36 && relY < 0.64 && relX > 0.3 && relX < 0.7;
+
+      const isEye = eyeZone && (contrast > 6 || lum < faceMedianLum * 0.7);
+      const isBrow = relY < 0.4 && (contrast > 4 || lum < faceMedianLum * 0.78);
+      const isMouth = mouthZone && (
+        contrast > 4 ||
+        lum < faceMedianLum * 0.78 ||
+        (r > g + 6 && r > b + 3 && lum < faceMedianLum * 0.95)
+      );
+      const isNose = noseZone && contrast > 3;
+      const isSunglass = eyeZone && lum < 58 && r + g + b < 130;
+
+      return isEye || isBrow || isMouth || isNose || isSunglass;
+    }
+
+    function darkenFeatureCentroid(rgb, avgLum) {
+      if (avgLum < 55) {
+        return [
+          Math.max(0, Math.round(rgb[0] * 0.55)),
+          Math.max(0, Math.round(rgb[1] * 0.48)),
+          Math.max(0, Math.round(rgb[2] * 0.55)),
+        ];
+      }
+      if (avgLum < 95) {
+        return [
+          Math.max(0, Math.round(rgb[0] * 0.62)),
+          Math.max(0, Math.round(rgb[1] * 0.55)),
+          Math.max(0, Math.round(rgb[2] * 0.58)),
+        ];
+      }
+      return [
+        Math.min(255, Math.max(40, Math.round(rgb[0] * 0.72))),
+        Math.max(0, Math.round(rgb[1] * 0.58)),
+        Math.max(0, Math.round(rgb[2] * 0.58)),
+      ];
+    }
+
+    function collectFacePixelInfo(imageData, faceMask) {
+      const { width, height, data } = imageData;
+      const components = splitMaskComponents(faceMask, width, height);
+      const allInfo = [];
+
+      for (const comp of components) {
+        const faceW = Math.max(1, comp.maxX - comp.minX + 1);
+        const faceH = Math.max(1, comp.maxY - comp.minY + 1);
+        const infos = [];
+        const lums = [];
+
+        for (const p of comp.pixels) {
+          const y = (p / width) | 0;
+          const x = p % width;
+          const i = p * 4;
+          const rgb = [data[i], data[i + 1], data[i + 2]];
+          const lum = pixelLuminance(rgb[0], rgb[1], rgb[2]);
+          const meanLum = localMeanLuminance(data, width, height, x, y, 5);
+          const contrast = meanLum - lum;
+          const relY = (y - comp.minY) / faceH;
+          const relX = (x - comp.minX) / faceW;
+          infos.push({ p, x, y, rgb, lum, contrast, relY, relX });
+          lums.push(lum);
+        }
+
+        if (infos.length < 20) continue;
+        lums.sort((a, b) => a - b);
+        const faceMedianLum = lums[Math.floor(lums.length / 2)] || 120;
+
+        for (const info of infos) {
+          info.medianLum = faceMedianLum;
+          info.isFeature = classifyFaceFeature(
+            info.rgb,
+            info.lum,
+            info.contrast,
+            info.relY,
+            info.relX,
+            faceMedianLum,
+          );
+          allInfo.push(info);
+        }
       }
 
-      for (let iter = 0; iter < 20; iter++) {
+      return allInfo;
+    }
+
+    function kmeansPlusPlusInit(pixels, k) {
+      const centroids = [pixels[Math.floor(Math.random() * pixels.length)].slice()];
+      while (centroids.length < k) {
+        let pick = 0;
+        let farthest = -1;
+        for (let i = 0; i < pixels.length; i++) {
+          let nearest = Infinity;
+          for (const c of centroids) {
+            const d = labDist(rgbToLab(pixels[i]), rgbToLab(c));
+            if (d < nearest) nearest = d;
+          }
+          if (nearest > farthest) {
+            farthest = nearest;
+            pick = i;
+          }
+        }
+        centroids.push(pixels[pick].slice());
+      }
+      return centroids;
+    }
+
+    function kmeansFromPixels(pixels, k) {
+      const centroids = kmeansPlusPlusInit(pixels, k);
+
+      for (let iter = 0; iter < 24; iter++) {
         const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
         for (const px of pixels) {
           const label = nearestCentroid(px, centroids);
@@ -538,45 +697,76 @@
       return centroids;
     }
 
+    function boostFacialFeatures(imageData, faceMask, localLabels, centroids) {
+      const faceInfo = collectFacePixelInfo(imageData, faceMask);
+      if (faceInfo.length < 40) return { localLabels, centroids };
+
+      const featurePixels = [];
+      const featurePositions = [];
+      const featureLums = [];
+
+      for (const f of faceInfo) {
+        if (!f.isFeature) continue;
+        featurePixels.push(f.rgb);
+        featurePositions.push(f.p);
+        featureLums.push(f.lum);
+      }
+      if (featurePixels.length < 24) return { localLabels, centroids };
+
+      const fk = Math.min(20, Math.max(10, Math.round(featurePixels.length / 28)));
+      const featureCentroidsRaw = kmeansFromPixels(featurePixels, fk);
+      const featureCentroids = featureCentroidsRaw.map((rgb, idx) => {
+        const clusterLums = [];
+        for (let j = 0; j < featurePixels.length; j++) {
+          if (nearestCentroid(featurePixels[j], featureCentroidsRaw) === idx) {
+            clusterLums.push(featureLums[j]);
+          }
+        }
+        const avgLum = clusterLums.length
+          ? clusterLums.reduce((a, b) => a + b, 0) / clusterLums.length
+          : pixelLuminance(rgb[0], rgb[1], rgb[2]);
+        return darkenFeatureCentroid(rgb, avgLum);
+      });
+
+      const newCentroids = centroids.map((c) => c.slice());
+      const offset = newCentroids.length;
+      featureCentroids.forEach((c) => newCentroids.push(c));
+
+      const newLabels = new Int32Array(localLabels);
+      for (let j = 0; j < featurePositions.length; j++) {
+        newLabels[featurePositions[j]] = offset + nearestCentroid(featurePixels[j], featureCentroids);
+      }
+      return { localLabels: newLabels, centroids: newCentroids };
+    }
+
     function buildFaceKmeansMap(imageData, faceMask) {
       const { width, height, data } = imageData;
-      const pixels = [];
-      const positions = [];
-      for (let p = 0; p < width * height; p++) {
-        if (!faceMask[p]) continue;
-        const i = p * 4;
-        pixels.push([data[i], data[i + 1], data[i + 2]]);
-        positions.push(p);
+      const faceInfo = collectFacePixelInfo(imageData, faceMask);
+      if (faceInfo.length < 80) return null;
+
+      const pixels = faceInfo.map((f) => f.rgb);
+      const positions = faceInfo.map((f) => f.p);
+      const weightedSamples = [];
+      for (let j = 0; j < pixels.length; j++) {
+        weightedSamples.push(pixels[j]);
+        if (faceInfo[j].isFeature) {
+          weightedSamples.push(pixels[j], pixels[j], pixels[j]);
+        } else if (faceInfo[j].contrast > 3) {
+          weightedSamples.push(pixels[j]);
+        }
       }
-      if (pixels.length < 80) return null;
 
       const k = Math.min(
         FACE_COLORS_MAX,
-        Math.max(FACE_COLORS_MIN, Math.round(pixels.length / 400)),
+        Math.max(FACE_COLORS_MIN, Math.round(pixels.length / 90)),
       );
-      const centroids = kmeansFromPixels(pixels, k);
+      let centroids = kmeansFromPixels(weightedSamples, k);
       const localLabels = new Int32Array(width * height);
       localLabels.fill(-1);
       for (let j = 0; j < positions.length; j++) {
         localLabels[positions[j]] = nearestCentroid(pixels[j], centroids);
       }
-      return { localLabels, centroids };
-    }
-
-    function upscaleFaceLabels(localLabels, srcW, srcH, targetW, targetH) {
-      const out = new Int32Array(targetW * targetH);
-      out.fill(-1);
-      const scaleX = srcW / targetW;
-      const scaleY = srcH / targetH;
-      for (let y = 0; y < targetH; y++) {
-        for (let x = 0; x < targetW; x++) {
-          const sx = Math.min(srcW - 1, Math.floor(x * scaleX));
-          const sy = Math.min(srcH - 1, Math.floor(y * scaleY));
-          const v = localLabels[sy * srcW + sx];
-          if (v >= 0) out[y * targetW + x] = v;
-        }
-      }
-      return out;
+      return boostFacialFeatures(imageData, faceMask, localLabels, centroids);
     }
 
     function softenImageData(imageData) {
@@ -798,7 +988,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      const faceMinArea = 35;
+      const faceMinArea = 8;
 
       for (let colorId = 0; colorId < centroids.length; colorId++) {
         const parts = connectedComponents(labels, width, height, colorId);
@@ -922,33 +1112,18 @@
         fullImageData.height,
       );
 
-      const faceDetailImg = resizeImage(sourceImage, Math.min(MAX_SIZE, FACE_DETAIL_SIZE));
-      const faceMaskDetail = upscaleMask(
-        faceMaskSeg,
-        segmentSharp.width,
-        segmentSharp.height,
-        faceDetailImg.width,
-        faceDetailImg.height,
-      );
-      const faceMap = buildFaceKmeansMap(faceDetailImg, faceMaskDetail);
+      const faceMap = buildFaceKmeansMap(fullImageData, fullFaceMask);
 
       let palette = MASTER_PALETTE.map((c) => c.slice());
       let labelMap = bgLabelMap;
 
       if (faceMap) {
-        const faceLabelsFull = upscaleFaceLabels(
-          faceMap.localLabels,
-          faceDetailImg.width,
-          faceDetailImg.height,
-          fullImageData.width,
-          fullImageData.height,
-        );
         const offset = palette.length;
         faceMap.centroids.forEach((c) => palette.push(c.slice()));
         const labels = new Int32Array(bgLabelMap.labels);
         for (let i = 0; i < labels.length; i++) {
-          if (fullFaceMask[i] && faceLabelsFull[i] >= 0) {
-            labels[i] = offset + faceLabelsFull[i];
+          if (fullFaceMask[i] && faceMap.localLabels[i] >= 0) {
+            labels[i] = offset + faceMap.localLabels[i];
           }
         }
         labelMap = { width: fullImageData.width, height: fullImageData.height, labels };
