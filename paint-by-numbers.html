@@ -48,14 +48,9 @@
       border-color: var(--accent);
       background: #eff6ff;
     }
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
+    .actions {
       margin-top: 20px;
     }
-    label { display: block; font-size: 0.9rem; margin-bottom: 6px; color: var(--muted); }
-    input[type="range"] { width: 100%; }
     button {
       background: var(--accent);
       color: white;
@@ -105,36 +100,6 @@
       color: #1e3a8a;
       font-size: 0.95rem;
     }
-    .tune-panel {
-      margin-top: 20px;
-      padding-top: 18px;
-      border-top: 1px solid var(--border);
-    }
-    .tune-panel h2 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-    }
-    .tune-hint {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .tune-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .tune-actions button.secondary {
-      background: #eef2ff;
-      color: #1e40af;
-    }
-    .reference-wrap {
-      position: relative;
-    }
-    .reference-wrap canvas {
-      display: block;
-    }
     .hidden { display: none; }
   </style>
 </head>
@@ -151,49 +116,11 @@
       </div>
       <input class="hidden" id="fileInput" type="file" accept="image/*">
 
-      <div class="controls">
-        <div>
-          <label for="colors">Оттенков радуги: <span id="colorsValue">24</span></label>
-          <input id="colors" type="range" min="12" max="24" value="24" step="1">
-        </div>
-        <div>
-          <label for="detail">Детализация: <span id="detailValue">высокая</span></label>
-          <input id="detail" type="range" min="1" max="3" value="3">
-        </div>
-        <div style="display:flex; align-items:end;">
-          <button id="generateBtn" disabled>Создать картину</button>
-        </div>
+      <div class="actions">
+        <button id="generateBtn" disabled>Создать картину</button>
       </div>
       <div class="status" id="status"></div>
       <div class="downloads hidden" id="downloads"></div>
-
-      <div class="tune-panel hidden" id="tunePanel">
-        <h2>Настройка цветов</h2>
-        <p class="tune-hint">Ползунки влияют только на вид образца. Краски для раскрашивания — всегда одни и те же из фиксированной палитры.</p>
-        <div class="controls">
-          <div>
-            <label for="brightness">Яркость: <span id="brightnessValue">0</span></label>
-            <input id="brightness" type="range" min="-40" max="40" value="0">
-          </div>
-          <div>
-            <label for="saturation">Насыщенность: <span id="saturationValue">0</span></label>
-            <input id="saturation" type="range" min="-50" max="50" value="0">
-          </div>
-          <div>
-            <label for="hue">Оттенок: <span id="hueValue">0</span>°</label>
-            <input id="hue" type="range" min="-30" max="30" value="0">
-          </div>
-          <div>
-            <label for="watercolor">Акварель: <span id="watercolorValue">0</span>%</label>
-            <input id="watercolor" type="range" min="0" max="100" value="0">
-          </div>
-        </div>
-        <div class="tune-actions">
-          <button type="button" class="secondary" id="presetDisneyBtn">Пресет «Disney»</button>
-          <button type="button" class="secondary" id="presetWatercolorBtn">Пресет «Акварель»</button>
-          <button type="button" class="secondary" id="resetTuneBtn">Сбросить цвета</button>
-        </div>
-      </div>
     </div>
 
     <div class="preview-grid hidden" id="previews">
@@ -203,9 +130,7 @@
       </div>
       <div class="preview-card">
         <h3>Цветной образец</h3>
-        <div class="reference-wrap">
-          <canvas id="referenceCanvas"></canvas>
-        </div>
+        <canvas id="referenceCanvas"></canvas>
       </div>
       <div class="preview-card">
         <h3>Палитра</h3>
@@ -225,117 +150,12 @@
     const statusEl = document.getElementById("status");
     const downloadsEl = document.getElementById("downloads");
     const previewsEl = document.getElementById("previews");
-    const colorsInput = document.getElementById("colors");
-    const detailInput = document.getElementById("detail");
-    const colorsValue = document.getElementById("colorsValue");
-    const detailValue = document.getElementById("detailValue");
-    const tunePanel = document.getElementById("tunePanel");
-    const brightnessInput = document.getElementById("brightness");
-    const saturationInput = document.getElementById("saturation");
-    const hueInput = document.getElementById("hue");
-    const watercolorInput = document.getElementById("watercolor");
-    const brightnessValue = document.getElementById("brightnessValue");
-    const saturationValue = document.getElementById("saturationValue");
-    const hueValue = document.getElementById("hueValue");
-    const watercolorValue = document.getElementById("watercolorValue");
-    const presetDisneyBtn = document.getElementById("presetDisneyBtn");
-    const presetWatercolorBtn = document.getElementById("presetWatercolorBtn");
-    const resetTuneBtn = document.getElementById("resetTuneBtn");
+
+    const RAINBOW_COUNT = 24;
+    const MAX_SIZE = 1300;
+    const MIN_LABEL_AREA = 600;
 
     let sourceImage = null;
-    let paintState = null;
-    let disneyMode = false;
-
-    const detailLabels = ["низкая", "средняя", "высокая"];
-    const tuneInputs = [brightnessInput, saturationInput, hueInput, watercolorInput];
-
-    function hslToRgb(h, s, l) {
-      h = ((h % 360) + 360) % 360 / 360;
-      if (s === 0) {
-        const v = Math.round(l * 255);
-        return [v, v, v];
-      }
-      const hue2rgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      return [
-        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
-        Math.round(hue2rgb(p, q, h) * 255),
-        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
-      ];
-    }
-
-    function buildRainbowPalette(colorCount) {
-      const count = clamp(Math.round(colorCount), 12, 24);
-      const palette = [];
-      for (let i = 0; i < count; i++) {
-        const hue = (i * 360) / count;
-        palette.push(hslToRgb(hue, 0.94, 0.56));
-      }
-      return palette;
-    }
-
-    function rgbToHue(rgb) {
-      const r = rgb[0] / 255;
-      const g = rgb[1] / 255;
-      const b = rgb[2] / 255;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      if (max === min) return 0;
-      const d = max - min;
-      let h;
-      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-      else if (max === g) h = ((b - r) / d + 2) / 6;
-      else h = ((r - g) / d + 4) / 6;
-      return h * 360;
-    }
-
-    function compactUsedColors(labelMap, palette) {
-      const { width, height, labels } = labelMap;
-      const used = new Set();
-      for (let i = 0; i < labels.length; i++) used.add(labels[i]);
-
-      const usedIndices = Array.from(used).sort((a, b) => {
-        const hueDiff = rgbToHue(palette[a]) - rgbToHue(palette[b]);
-        if (Math.abs(hueDiff) > 0.5) return hueDiff;
-        return a - b;
-      });
-
-      const remap = new Map();
-      const compactPalette = [];
-      usedIndices.forEach((oldIdx, newIdx) => {
-        remap.set(oldIdx, newIdx);
-        compactPalette.push(palette[oldIdx].slice());
-      });
-
-      const compactLabels = new Int32Array(labels.length);
-      for (let i = 0; i < labels.length; i++) {
-        compactLabels[i] = remap.get(labels[i]);
-      }
-
-      return {
-        labelMap: { width, height, labels: compactLabels },
-        palette: compactPalette,
-      };
-    }
-
-    colorsInput.addEventListener("input", () => {
-      colorsValue.textContent = colorsInput.value;
-    });
-    detailInput.addEventListener("input", () => {
-      detailValue.textContent = detailLabels[detailInput.value - 1];
-    });
-    tuneInputs.forEach((input) => input.addEventListener("input", onTuneChange));
-    presetDisneyBtn.addEventListener("click", applyDisneyPreset);
-    presetWatercolorBtn.addEventListener("click", applyWatercolorPreset);
-    resetTuneBtn.addEventListener("click", resetTune);
 
     dropzone.addEventListener("click", () => fileInput.click());
     dropzone.addEventListener("dragover", (e) => {
@@ -396,6 +216,82 @@
       return ctx.getImageData(0, 0, width, height);
     }
 
+    function hslToRgb(h, s, l) {
+      h = ((h % 360) + 360) % 360 / 360;
+      if (s === 0) {
+        const v = Math.round(l * 255);
+        return [v, v, v];
+      }
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      return [
+        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
+        Math.round(hue2rgb(p, q, h) * 255),
+        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
+      ];
+    }
+
+    function buildRainbowPalette(colorCount) {
+      const palette = [];
+      for (let i = 0; i < colorCount; i++) {
+        const hue = (i * 360) / colorCount;
+        palette.push(hslToRgb(hue, 0.94, 0.56));
+      }
+      return palette;
+    }
+
+    function rgbToHue(rgb) {
+      const r = rgb[0] / 255;
+      const g = rgb[1] / 255;
+      const b = rgb[2] / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (max === min) return 0;
+      const d = max - min;
+      let h;
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      else if (max === g) h = ((b - r) / d + 2) / 6;
+      else h = ((r - g) / d + 4) / 6;
+      return h * 360;
+    }
+
+    function compactUsedColors(labelMap, palette) {
+      const { width, height, labels } = labelMap;
+      const used = new Set();
+      for (let i = 0; i < labels.length; i++) used.add(labels[i]);
+
+      const usedIndices = Array.from(used).sort((a, b) => {
+        const hueDiff = rgbToHue(palette[a]) - rgbToHue(palette[b]);
+        if (Math.abs(hueDiff) > 0.5) return hueDiff;
+        return a - b;
+      });
+
+      const remap = new Map();
+      const compactPalette = [];
+      usedIndices.forEach((oldIdx, newIdx) => {
+        remap.set(oldIdx, newIdx);
+        compactPalette.push(palette[oldIdx].slice());
+      });
+
+      const compactLabels = new Int32Array(labels.length);
+      for (let i = 0; i < labels.length; i++) {
+        compactLabels[i] = remap.get(labels[i]);
+      }
+
+      return {
+        labelMap: { width, height, labels: compactLabels },
+        palette: compactPalette,
+      };
+    }
+
     function rgbToLab(rgb) {
       let r = rgb[0] / 255;
       let g = rgb[1] / 255;
@@ -420,145 +316,6 @@
       const da = a[1] - b[1];
       const db = a[2] - b[2];
       return dl * dl + da * da + db * db;
-    }
-
-    function clamp(v, min, max) {
-      return Math.min(max, Math.max(min, v));
-    }
-
-    function getTuneSettings() {
-      return {
-        brightness: Number(brightnessInput.value),
-        saturation: Number(saturationInput.value),
-        hue: Number(hueInput.value),
-        watercolor: Number(watercolorInput.value),
-        disney: disneyMode,
-      };
-    }
-
-    function updateTuneLabels() {
-      brightnessValue.textContent = brightnessInput.value;
-      saturationValue.textContent = saturationInput.value;
-      hueValue.textContent = hueInput.value;
-      watercolorValue.textContent = watercolorInput.value;
-    }
-
-    function buildAdjustedPalette(baseCentroids) {
-      return baseCentroids.map((rgb) => rgb.slice());
-    }
-
-    function drawReferenceStyled(labelMap, centroids, tune) {
-      const flat = drawReference(labelMap, centroids);
-      const needsEffect = tune.disney || tune.watercolor >= 8;
-      if (!needsEffect) return flat;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = flat.width;
-      canvas.height = flat.height;
-      const ctx = canvas.getContext("2d");
-
-      if (tune.disney) {
-        ctx.filter = `saturate(${152 + tune.saturation}%) contrast(1.1) brightness(1.05)`;
-        ctx.drawImage(flat, 0, 0);
-        ctx.filter = "none";
-
-        ctx.globalAlpha = 0.32;
-        ctx.filter = "blur(1.1px)";
-        ctx.drawImage(flat, 0, 0);
-        ctx.filter = "none";
-        ctx.globalAlpha = 0.72;
-        ctx.drawImage(flat, 0, 0);
-        ctx.globalAlpha = 1;
-
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = "#ffb0c8";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "screen";
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = "#ffe080";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "color-dodge";
-        ctx.globalAlpha = 0.06;
-        ctx.fillStyle = "#fff8e0";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 1;
-      } else {
-        const blur = tune.watercolor * 0.14;
-        ctx.filter = `blur(${blur}px) saturate(${100 + tune.saturation * 0.5}%)`;
-        ctx.drawImage(flat, 0, 0);
-        ctx.filter = "none";
-
-        ctx.globalAlpha = 0.55;
-        ctx.drawImage(flat, 0, 0);
-        ctx.globalAlpha = 1;
-
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.globalAlpha = tune.watercolor / 220;
-        ctx.fillStyle = "#fff6e8";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 1;
-      }
-
-      return canvas;
-    }
-
-    function resetTune() {
-      disneyMode = false;
-      brightnessInput.value = 0;
-      saturationInput.value = 0;
-      hueInput.value = 0;
-      watercolorInput.value = 0;
-      updateTuneLabels();
-      onTuneChange();
-    }
-
-    function applyDisneyPreset() {
-      disneyMode = true;
-      brightnessInput.value = 22;
-      saturationInput.value = 50;
-      hueInput.value = 8;
-      watercolorInput.value = 0;
-      updateTuneLabels();
-      onTuneChange();
-    }
-
-    function applyWatercolorPreset() {
-      disneyMode = false;
-      brightnessInput.value = 8;
-      saturationInput.value = -15;
-      hueInput.value = 4;
-      watercolorInput.value = 55;
-      updateTuneLabels();
-      onTuneChange();
-    }
-
-    function onTuneChange() {
-      if (!paintState) return;
-      updateTuneLabels();
-      renderAdjustedOutputs();
-    }
-
-    function renderAdjustedOutputs() {
-      const tune = getTuneSettings();
-      const centroids = buildAdjustedPalette(paintState.baseCentroids);
-      const referenceCanvas = drawReferenceStyled(paintState.labelMap, centroids, tune);
-      const paletteCanvas = drawPalette(centroids);
-      const printableCanvas = combineForPrint(paintState.templateCanvas, paletteCanvas);
-
-      showCanvas("referenceCanvas", referenceCanvas);
-      showCanvas("paletteCanvas", paletteCanvas);
-      showCanvas("printableCanvas", printableCanvas);
-
-      downloadsEl.innerHTML = "";
-      addDownload(paintState.templateCanvas, "template.png");
-      addDownload(referenceCanvas, "reference.png");
-      addDownload(paletteCanvas, "palette.png");
-      addDownload(printableCanvas, "printable.png");
-
-      paintState.currentCentroids = centroids;
     }
 
     function nearestCentroid(rgb, centroids) {
@@ -755,31 +512,29 @@
 
       await new Promise((resolve) => setTimeout(resolve, 30));
 
-      const colors = Number(colorsInput.value);
-      const detail = Number(detailInput.value);
-      const maxSize = detail === 1 ? 900 : detail === 2 ? 1100 : 1300;
-      const minLabelArea = detail === 1 ? 1800 : detail === 2 ? 1000 : 600;
-
-      const rainbowPool = buildRainbowPalette(colors);
-      const imageData = resizeImage(sourceImage, maxSize);
+      const rainbowPool = buildRainbowPalette(RAINBOW_COUNT);
+      const imageData = resizeImage(sourceImage, MAX_SIZE);
       const rawLabelMap = buildLabelMap(imageData, rainbowPool);
       const { labelMap, palette } = compactUsedColors(rawLabelMap, rainbowPool);
-      const templateCanvas = drawTemplate(labelMap, palette, minLabelArea);
+      const templateCanvas = drawTemplate(labelMap, palette, MIN_LABEL_AREA);
+      const referenceCanvas = drawReference(labelMap, palette);
+      const paletteCanvas = drawPalette(palette);
+      const printableCanvas = combineForPrint(templateCanvas, paletteCanvas);
 
-      paintState = {
-        labelMap,
-        baseCentroids: palette.map((c) => c.slice()),
-        templateCanvas,
-      };
-
-      applyDisneyPreset();
       showCanvas("templateCanvas", templateCanvas);
-      renderAdjustedOutputs();
+      showCanvas("referenceCanvas", referenceCanvas);
+      showCanvas("paletteCanvas", paletteCanvas);
+      showCanvas("printableCanvas", printableCanvas);
+
+      downloadsEl.innerHTML = "";
+      addDownload(templateCanvas, "template.png");
+      addDownload(referenceCanvas, "reference.png");
+      addDownload(paletteCanvas, "palette.png");
+      addDownload(printableCanvas, "printable.png");
 
       previewsEl.classList.remove("hidden");
       downloadsEl.classList.remove("hidden");
-      tunePanel.classList.remove("hidden");
-      statusEl.textContent = `Готово! На фото ${palette.length} цвет${palette.length === 1 ? "" : palette.length < 5 ? "а" : "ов"} из радуги — скачивайте или настройте образец.`;
+      statusEl.textContent = `Готово! На фото ${palette.length} цвет${palette.length === 1 ? "" : palette.length < 5 ? "а" : "ов"} — скачивайте файлы.`;
       generateBtn.disabled = false;
     }
   </script>
