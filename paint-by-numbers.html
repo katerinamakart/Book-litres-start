@@ -109,7 +109,7 @@
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
-      <p class="tip">Цвета берутся прямо с вашего фото — образец максимально похож на оригинал. В палитру попадают только те краски, которые реально используются.</p>
+      <p class="tip">Краски из ваших референсов — гжель, слоник, цветы, бабочка, пионы. Фото сопоставляется с ближайшим оттенком; в палитру попадают только используемые цвета.</p>
       <div class="dropzone" id="dropzone">
         <strong>Перетащите фото сюда</strong><br>
         или нажмите, чтобы выбрать файл
@@ -151,10 +151,66 @@
     const downloadsEl = document.getElementById("downloads");
     const previewsEl = document.getElementById("previews");
 
-    const COLOR_COUNT = 28;
     const MAX_SIZE = 1400;
     const MIN_LABEL_AREA = 380;
-    const SAMPLE_STEP = 3;
+
+    // Палитра из референсов: гжель, слоник, цветы, бабочка, яблоня, пионы
+    const MASTER_PALETTE = [
+      [25, 22, 28],    // угольный
+      [54, 69, 79],    // тёмно-серый
+      [90, 55, 35],    // шоколад
+      [120, 75, 45],   // коричневый
+      [160, 90, 45],   // ржаво-коричневый
+      [100, 20, 40],   // бордовый
+      [140, 20, 45],   // тёмно-малиновый
+      [150, 15, 45],  // глубокий красный
+      [200, 90, 30],   // жжёный оранж
+      [220, 100, 50],  // терракота
+      [255, 140, 40],  // яркий оранж
+      [250, 128, 114], // лосось
+      [255, 175, 160], // персик
+      [255, 210, 185], // тёплая кожа
+      [255, 200, 50],  // золотой
+      [255, 210, 60],  // солнечный
+      [255, 225, 155], // блонд
+      [255, 230, 120], // жёлтый
+      [255, 245, 180], // лимонный
+      [255, 245, 200], // масляный свет
+      [20, 70, 40],    // тёмно-зелёный
+      [30, 90, 45],    // хвойный
+      [45, 130, 65],   // изумруд
+      [75, 175, 85],   // трава
+      [110, 120, 95],  // олива
+      [143, 165, 140], // шалфей
+      [175, 195, 170], // шалфей светлый
+      [170, 220, 80],  // лайм
+      [190, 230, 70],  // шартрез
+      [160, 230, 180], // мятный
+      [180, 210, 165], // салатовый
+      [0, 140, 90],    // тёмная бирюза
+      [0, 150, 160],   // бирюза
+      [50, 190, 200],  // аквамарин
+      [20, 40, 95],    // ночной синий
+      [30, 60, 180],   // королевский синий
+      [45, 90, 200],   // синий
+      [70, 130, 210],  // гжельский
+      [135, 200, 245], // небесный
+      [135, 206, 235], // голубой
+      [176, 196, 214], // серо-голубой
+      [190, 50, 90],   // малина
+      [210, 30, 90],   // пурпур
+      [220, 60, 120],  // фуксия
+      [255, 50, 120],  // яркая фуксия
+      [255, 105, 180], // розовый
+      [255, 130, 160], // роза
+      [255, 170, 190], // румянец
+      [255, 182, 170], // персиковый
+      [255, 200, 210], // нежно-розовый
+      [230, 210, 240], // лаванда
+      [220, 195, 160], // бежевый
+      [253, 245, 230], // кремовый
+      [255, 252, 248], // белый
+    ];
 
     let sourceImage = null;
 
@@ -215,10 +271,6 @@
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
       return ctx.getImageData(0, 0, width, height);
-    }
-
-    function clamp(v, min, max) {
-      return Math.min(max, Math.max(min, v));
     }
 
     function rgbToHue(rgb) {
@@ -303,44 +355,6 @@
         }
       }
       return best;
-    }
-
-    function kmeansFromPhoto(imageData, k, sampleStep) {
-      const { data } = imageData;
-      const pixels = [];
-      for (let i = 0; i < data.length; i += 4 * sampleStep) {
-        pixels.push([data[i], data[i + 1], data[i + 2]]);
-      }
-
-      const centroids = [];
-      const used = new Set();
-      while (centroids.length < k) {
-        const idx = Math.floor(Math.random() * pixels.length);
-        if (used.has(idx)) continue;
-        used.add(idx);
-        centroids.push(pixels[idx].slice());
-      }
-
-      for (let iter = 0; iter < 18; iter++) {
-        const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
-        for (let i = 0; i < pixels.length; i++) {
-          const label = nearestCentroid(pixels[i], centroids);
-          sums[label][0] += pixels[i][0];
-          sums[label][1] += pixels[i][1];
-          sums[label][2] += pixels[i][2];
-          sums[label][3] += 1;
-        }
-        for (let c = 0; c < k; c++) {
-          if (sums[c][3] === 0) continue;
-          centroids[c] = [
-            Math.round(sums[c][0] / sums[c][3]),
-            Math.round(sums[c][1] / sums[c][3]),
-            Math.round(sums[c][2] / sums[c][3]),
-          ];
-        }
-      }
-
-      return centroids;
     }
 
     function buildLabelMap(imageData, centroids) {
@@ -524,9 +538,8 @@
       await new Promise((resolve) => setTimeout(resolve, 30));
 
       const imageData = resizeImage(sourceImage, MAX_SIZE);
-      const colorPool = kmeansFromPhoto(imageData, COLOR_COUNT, SAMPLE_STEP);
-      const rawLabelMap = buildLabelMap(imageData, colorPool);
-      const { labelMap, palette } = compactUsedColors(rawLabelMap, colorPool);
+      const rawLabelMap = buildLabelMap(imageData, MASTER_PALETTE);
+      const { labelMap, palette } = compactUsedColors(rawLabelMap, MASTER_PALETTE);
       const templateCanvas = drawTemplate(labelMap, palette, MIN_LABEL_AREA);
       const referenceCanvas = drawReference(labelMap, palette);
       const paletteCanvas = drawPalette(palette);
