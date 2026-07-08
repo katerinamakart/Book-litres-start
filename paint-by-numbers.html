@@ -128,11 +128,11 @@
 
     <div class="panel">
       <h2 style="margin:0 0 10px; font-size:1.1rem;">Как должно выглядеть</h2>
-      <p class="tip">Хорошая картина по номерам — это <strong>крупные ровные зоны</strong> и немного линий. Не должно быть «мелкой сетки» по всему небу и горам.</p>
+      <p class="tip">Хороший баланс: <strong>лицо и люди детально</strong>, а небо и горы — крупными зонами без лишних линий.</p>
       <div class="example-grid">
         <div class="example-card">
           <img src="paint-by-numbers/example-clean-template.png" alt="Пример чистого шаблона">
-          <p>Так правильно — крупные зоны</p>
+          <p>Баланс: лицо видно, фон простой</p>
         </div>
         <div class="example-card">
           <img src="paint-by-numbers/example-clean-reference.png" alt="Пример цветного образца">
@@ -150,12 +150,12 @@
 
       <div class="controls">
         <div>
-          <label for="colors">Количество цветов: <span id="colorsValue">18</span></label>
-          <input id="colors" type="range" min="12" max="30" value="18">
+          <label for="colors">Количество цветов: <span id="colorsValue">20</span></label>
+          <input id="colors" type="range" min="12" max="30" value="20">
         </div>
         <div>
-          <label for="simplicity">Простота линий: <span id="simplicityValue">чистый шаблон</span></label>
-          <input id="simplicity" type="range" min="1" max="3" value="3">
+          <label for="simplicity">Простота линий: <span id="simplicityValue">средне</span></label>
+          <input id="simplicity" type="range" min="1" max="3" value="2">
         </div>
         <div>
           <label for="vibrancy">Яркость цветов: <span id="vibrancyValue">яркие</span></label>
@@ -438,9 +438,9 @@
       return { width, height, labels: filtered };
     }
 
-    function buildSimplifiedLabelMap(imageData, centroids, simplifyFactor) {
-      const sw = Math.max(1, Math.round(imageData.width / simplifyFactor));
-      const sh = Math.max(1, Math.round(imageData.height / simplifyFactor));
+    function downscaleImageData(imageData, factor, centroids, smoothPasses = 1) {
+      const sw = Math.max(1, Math.round(imageData.width / factor));
+      const sh = Math.max(1, Math.round(imageData.height / factor));
       const smallCanvas = document.createElement("canvas");
       smallCanvas.width = sw;
       smallCanvas.height = sh;
@@ -449,10 +449,10 @@
       tempCanvas.height = imageData.height;
       tempCanvas.getContext("2d").putImageData(imageData, 0, 0);
       smallCanvas.getContext("2d").drawImage(tempCanvas, 0, 0, sw, sh);
-      const smallData = smallCanvas.getContext("2d").getImageData(0, 0, sw, sh);
-      let smallMap = buildLabelMap(smallData, centroids);
-      smallMap = modeFilterLabels(smallMap, 5);
-      smallMap = modeFilterLabels(smallMap, 5);
+      let smallMap = buildLabelMap(smallCanvas.getContext("2d").getImageData(0, 0, sw, sh), centroids);
+      for (let i = 0; i < smoothPasses; i++) {
+        smallMap = modeFilterLabels(smallMap, smoothPasses >= 2 ? 5 : 3);
+      }
 
       const labels = new Int32Array(imageData.width * imageData.height);
       for (let y = 0; y < imageData.height; y++) {
@@ -462,7 +462,64 @@
           labels[y * imageData.width + x] = smallMap.labels[sy * sw + sx];
         }
       }
-      return modeFilterLabels({ width: imageData.width, height: imageData.height, labels }, 3);
+      return { width: imageData.width, height: imageData.height, labels };
+    }
+
+    function buildDetailMask(imageData) {
+      const { width, height, data } = imageData;
+      const gray = new Float32Array(width * height);
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      }
+
+      const edges = new Float32Array(width * height);
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = y * width + x;
+          const gx = gray[idx + 1] - gray[idx - 1];
+          const gy = gray[idx + width] - gray[idx - width];
+          edges[idx] = Math.hypot(gx, gy);
+        }
+      }
+
+      let min = Infinity;
+      let max = 0;
+      for (const value of edges) {
+        if (value < min) min = value;
+        if (value > max) max = value;
+      }
+
+      const centerY = height * 0.42;
+      const centerX = width * 0.5;
+      const mask = new Float32Array(width * height);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const edge = (edges[idx] - min) / (max - min + 1e-6);
+          const dx = (x - centerX) / (width * 0.24);
+          const dy = (y - centerY) / (height * 0.3);
+          const focus = Math.exp(-(dx * dx + dy * dy));
+          mask[idx] = Math.min(1, edge * 0.65 + focus * 0.35);
+        }
+      }
+      return mask;
+    }
+
+    function buildAdaptiveLabelMap(imageData, centroids, simplifyFactor) {
+      const fineFactor = Math.max(1, simplifyFactor - 1);
+      const coarseFactor = simplifyFactor + 1;
+      const fineMap = downscaleImageData(imageData, fineFactor, centroids, 1);
+      const coarseMap = downscaleImageData(imageData, coarseFactor, centroids, 2);
+      const mask = buildDetailMask(imageData);
+
+      const sorted = Array.from(mask).sort((a, b) => a - b);
+      const threshold = sorted[Math.floor(sorted.length * (0.48 + simplifyFactor * 0.04))];
+
+      const labels = new Int32Array(imageData.width * imageData.height);
+      for (let i = 0; i < labels.length; i++) {
+        labels[i] = mask[i] >= threshold ? fineMap.labels[i] : coarseMap.labels[i];
+      }
+      return { width: imageData.width, height: imageData.height, labels };
     }
 
     function connectedComponents(labels, width, height, colorId) {
@@ -641,10 +698,10 @@
       const vibrancy = Number(vibrancyInput.value);
       const satFactor = vibrancy === 1 ? 1.45 : vibrancy === 2 ? 1.85 : 2.25;
       const contrast = vibrancy === 1 ? 1.08 : vibrancy === 2 ? 1.15 : 1.24;
-      const simplifyFactor = simplicity === 1 ? 2 : simplicity === 2 ? 3 : 5;
-      const maxSize = simplicity === 1 ? 1100 : simplicity === 2 ? 1000 : 900;
-      const minLabelArea = simplicity === 1 ? 1200 : simplicity === 2 ? 2000 : 3200;
-      const sampleStep = simplicity === 1 ? 4 : simplicity === 2 ? 5 : 6;
+      const simplifyFactor = simplicity === 1 ? 2 : simplicity === 2 ? 3 : 4;
+      const maxSize = simplicity === 1 ? 1100 : simplicity === 2 ? 1050 : 950;
+      const minLabelArea = simplicity === 1 ? 900 : simplicity === 2 ? 1400 : 2200;
+      const sampleStep = simplicity === 1 ? 3 : simplicity === 2 ? 4 : 5;
 
       const imageData = enhanceImageData(
         resizeImage(sourceImage, maxSize),
@@ -658,7 +715,7 @@
 
       const { centroids: rawCentroids } = kmeans(pixels, colors);
       const centroids = vibrantCentroids(rawCentroids);
-      const labelMap = buildSimplifiedLabelMap(imageData, centroids, simplifyFactor);
+      const labelMap = buildAdaptiveLabelMap(imageData, centroids, simplifyFactor);
       const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
       const referenceCanvas = drawReference(labelMap, centroids);
       const paletteCanvas = drawPalette(centroids);
