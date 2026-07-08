@@ -144,7 +144,7 @@
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
-      <p class="tip">Режим с максимальной детализацией сохраняет черты лица. Цвета берутся из фото без искусственной обработки.</p>
+      <p class="tip">Режим с максимальной детализацией сохраняет черты лица. После создания автоматически применяется яркий пресет «Disney» — солнечные розовые тона как в мультфильмах.</p>
       <div class="dropzone" id="dropzone">
         <strong>Перетащите фото сюда</strong><br>
         или нажмите, чтобы выбрать файл
@@ -189,6 +189,7 @@
           </div>
         </div>
         <div class="tune-actions">
+          <button type="button" class="secondary" id="presetDisneyBtn">Пресет «Disney»</button>
           <button type="button" class="secondary" id="presetWatercolorBtn">Пресет «Акварель»</button>
           <button type="button" class="secondary" id="resetTuneBtn">Сбросить цвета</button>
         </div>
@@ -237,11 +238,13 @@
     const saturationValue = document.getElementById("saturationValue");
     const hueValue = document.getElementById("hueValue");
     const watercolorValue = document.getElementById("watercolorValue");
+    const presetDisneyBtn = document.getElementById("presetDisneyBtn");
     const presetWatercolorBtn = document.getElementById("presetWatercolorBtn");
     const resetTuneBtn = document.getElementById("resetTuneBtn");
 
     let sourceImage = null;
     let paintState = null;
+    let disneyMode = false;
 
     const detailLabels = ["низкая", "средняя", "высокая"];
     const tuneInputs = [brightnessInput, saturationInput, hueInput, watercolorInput];
@@ -253,6 +256,7 @@
       detailValue.textContent = detailLabels[detailInput.value - 1];
     });
     tuneInputs.forEach((input) => input.addEventListener("input", onTuneChange));
+    presetDisneyBtn.addEventListener("click", applyDisneyPreset);
     presetWatercolorBtn.addEventListener("click", applyWatercolorPreset);
     resetTuneBtn.addEventListener("click", resetTune);
 
@@ -365,6 +369,7 @@
         saturation: Number(saturationInput.value),
         hue: Number(hueInput.value),
         watercolor: Number(watercolorInput.value),
+        disney: disneyMode,
       };
     }
 
@@ -381,6 +386,35 @@
       s = clamp(s * (1 + tune.saturation / 100), 0, 1);
       h = h + tune.hue;
 
+      if (tune.disney) {
+        l = clamp(l + 0.1, 0.08, 0.97);
+        s = clamp(s * 1.55 + 0.18, 0.22, 1);
+
+        if (h >= 330 || h <= 55) {
+          h = h + 7;
+          if (h >= 8 && h <= 38) {
+            s = clamp(s + 0.14, 0, 1);
+            l = clamp(l + 0.04, 0, 1);
+          }
+        } else if (h > 55 && h <= 75) {
+          h = h + 4;
+          s = clamp(s + 0.1, 0, 1);
+        } else if (h >= 180 && h <= 280) {
+          s = clamp(s + 0.12, 0, 1);
+          l = clamp(l + 0.03, 0, 1);
+        }
+
+        if (s < 0.28) {
+          h = clamp(h + 12, 0, 360);
+          s = 0.42;
+          l = clamp(l + 0.1, 0, 1);
+        }
+
+        if (l > 0.62) {
+          h = h + 3;
+        }
+      }
+
       if (tune.watercolor > 0) {
         const w = tune.watercolor / 100;
         s = clamp(s * (1 - w * 0.45) + 0.06 * w, 0, 1);
@@ -389,6 +423,18 @@
       }
 
       let [r, g, b] = hslToRgb(h, s, l);
+
+      if (tune.disney) {
+        r = Math.round(r * 1.06 + 18);
+        g = Math.round(g * 1.02 + 10);
+        b = Math.round(b * 0.94 + 6);
+        if (l > 0.58) {
+          r = Math.round(r * 0.88 + 255 * 0.12);
+          g = Math.round(g * 0.9 + 245 * 0.1);
+          b = Math.round(b * 0.92 + 220 * 0.08);
+        }
+      }
+
       if (tune.watercolor > 0) {
         const w = tune.watercolor / 100;
         r = Math.round(r * (1 - w * 0.12) + 255 * 0.12 * w);
@@ -406,35 +452,54 @@
       return baseCentroids.map((rgb) => adjustPaletteColor(rgb, tune));
     }
 
-    function drawReferenceWatercolor(labelMap, centroids, tune) {
+    function drawReferenceStyled(labelMap, centroids, tune) {
       const flat = drawReference(labelMap, centroids);
-      if (tune.watercolor < 8) return flat;
+      const needsEffect = tune.disney || tune.watercolor >= 8;
+      if (!needsEffect) return flat;
 
       const canvas = document.createElement("canvas");
       canvas.width = flat.width;
       canvas.height = flat.height;
       const ctx = canvas.getContext("2d");
-      const blur = tune.watercolor * 0.14;
 
-      ctx.filter = `blur(${blur}px) saturate(${100 + tune.saturation * 0.5}%)`;
-      ctx.drawImage(flat, 0, 0);
-      ctx.filter = "none";
+      if (tune.disney) {
+        ctx.filter = `saturate(${128 + tune.saturation}%) contrast(1.06)`;
+        ctx.drawImage(flat, 0, 0);
+        ctx.filter = "none";
 
-      ctx.globalAlpha = 0.55;
-      ctx.drawImage(flat, 0, 0);
-      ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "soft-light";
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = "#ffc8d8";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = 0.14;
+        ctx.fillStyle = "#fff4c8";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+      } else {
+        const blur = tune.watercolor * 0.14;
+        ctx.filter = `blur(${blur}px) saturate(${100 + tune.saturation * 0.5}%)`;
+        ctx.drawImage(flat, 0, 0);
+        ctx.filter = "none";
 
-      ctx.globalCompositeOperation = "soft-light";
-      ctx.globalAlpha = tune.watercolor / 220;
-      ctx.fillStyle = "#fff6e8";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(flat, 0, 0);
+        ctx.globalAlpha = 1;
+
+        ctx.globalCompositeOperation = "soft-light";
+        ctx.globalAlpha = tune.watercolor / 220;
+        ctx.fillStyle = "#fff6e8";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+      }
 
       return canvas;
     }
 
     function resetTune() {
+      disneyMode = false;
       brightnessInput.value = 0;
       saturationInput.value = 0;
       hueInput.value = 0;
@@ -443,7 +508,18 @@
       onTuneChange();
     }
 
+    function applyDisneyPreset() {
+      disneyMode = true;
+      brightnessInput.value = 18;
+      saturationInput.value = 45;
+      hueInput.value = 10;
+      watercolorInput.value = 0;
+      updateTuneLabels();
+      onTuneChange();
+    }
+
     function applyWatercolorPreset() {
+      disneyMode = false;
       brightnessInput.value = 8;
       saturationInput.value = -15;
       hueInput.value = 4;
@@ -461,7 +537,7 @@
     function renderAdjustedOutputs() {
       const tune = getTuneSettings();
       const centroids = buildAdjustedPalette(paintState.baseCentroids, tune);
-      const referenceCanvas = drawReferenceWatercolor(paintState.labelMap, centroids, tune);
+      const referenceCanvas = drawReferenceStyled(paintState.labelMap, centroids, tune);
       const paletteCanvas = drawPalette(centroids);
       const printableCanvas = combineForPrint(paintState.templateCanvas, paletteCanvas);
 
@@ -746,14 +822,14 @@
         templateCanvas,
       };
 
-      resetTune();
+      applyDisneyPreset();
       showCanvas("templateCanvas", templateCanvas);
       renderAdjustedOutputs();
 
       previewsEl.classList.remove("hidden");
       downloadsEl.classList.remove("hidden");
       tunePanel.classList.remove("hidden");
-      statusEl.textContent = "Готово! Настройте цвета ниже или скачайте файлы.";
+      statusEl.textContent = "Готово! Цвета в стиле Disney — настройте ниже или скачайте файлы.";
       generateBtn.disabled = false;
     }
   </script>
