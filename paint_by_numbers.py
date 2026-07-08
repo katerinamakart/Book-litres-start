@@ -50,16 +50,76 @@ def vibrant_palette(palette: np.ndarray, min_saturation: float = 0.38) -> np.nda
     return result.astype(np.uint8)
 
 
-def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
+def simplify_labels(labels: np.ndarray, min_region: int = 500, smooth_size: int = 5) -> np.ndarray:
+    """Remove tiny regions and smooth borders for cleaner paint-by-numbers lines."""
+    result = labels.copy()
+
+    for _ in range(2):
+        for color_id in np.unique(result):
+            mask = result == color_id
+            component_ids, count = ndimage.label(mask)
+            if count == 0:
+                continue
+            sizes = ndimage.sum(mask, component_ids, range(1, count + 1))
+            for component, size in enumerate(sizes, start=1):
+                if size >= min_region:
+                    continue
+                component_mask = component_ids == component
+                dilated = ndimage.binary_dilation(component_mask, iterations=2)
+                neighbors = result[dilated & ~component_mask]
+                if neighbors.size == 0:
+                    continue
+                result[component_mask] = int(np.bincount(neighbors).argmax())
+
+    def mode(values: np.ndarray) -> float:
+        values = values.astype(np.int64)
+        return float(np.bincount(values).argmax())
+
+    if smooth_size > 1:
+        result = ndimage.generic_filter(result, mode, size=smooth_size, mode="nearest").astype(np.int32)
+
+    return result
+
+
+def quantize_colors(
+    image: Image.Image,
+    num_colors: int,
+    simplify_factor: int = 4,
+) -> tuple[np.ndarray, np.ndarray]:
     enhanced = enhance_image(image)
-    quantized = enhanced.quantize(colors=num_colors, method=Image.Quantize.MEDIANCUT)
+    if simplify_factor > 1:
+        small = enhanced.resize(
+            (
+                max(1, enhanced.width // simplify_factor),
+                max(1, enhanced.height // simplify_factor),
+            ),
+            Image.Resampling.BILINEAR,
+        )
+    else:
+        small = enhanced
+
+    quantized = small.quantize(colors=num_colors, method=Image.Quantize.MEDIANCUT)
     raw_palette = np.array(quantized.getpalette(), dtype=np.uint8).reshape(-1, 3)[:num_colors]
     palette = vibrant_palette(raw_palette)
 
-    pixels = np.array(enhanced, dtype=np.float32).reshape(-1, 3)
+    pixels = np.array(small, dtype=np.float32).reshape(-1, 3)
     palette_f = palette.astype(np.float32)
-    labels = np.argmin(((pixels[:, None, :] - palette_f[None, :, :]) ** 2).sum(axis=2), axis=1)
-    labels = labels.astype(np.int32).reshape(enhanced.height, enhanced.width)
+    labels_small = np.argmin(((pixels[:, None, :] - palette_f[None, :, :]) ** 2).sum(axis=2), axis=1)
+    labels_small = labels_small.astype(np.int32).reshape(small.height, small.width)
+
+    min_region = max(8, (small.width * small.height) // (num_colors * 45))
+    labels_small = simplify_labels(labels_small, min_region=min_region, smooth_size=5)
+
+    if simplify_factor > 1:
+        labels_img = Image.fromarray(labels_small.astype(np.uint8), mode="L")
+        labels = np.array(
+            labels_img.resize(enhanced.size, Image.Resampling.NEAREST),
+            dtype=np.int32,
+        )
+        labels = simplify_labels(labels, min_region=min_region * simplify_factor, smooth_size=3)
+    else:
+        labels = labels_small
+
     return labels, palette
 
 
@@ -144,9 +204,10 @@ def create_reference_image(labels: np.ndarray, palette: np.ndarray) -> Image.Ima
 def generate_paint_by_numbers(
     input_path: Path,
     output_dir: Path,
-    num_colors: int = 24,
-    min_label_area: int = 1000,
+    num_colors: int = 18,
+    min_label_area: int = 1800,
     max_dimension: int = 1200,
+    simplify_factor: int = 4,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     image = Image.open(input_path)
@@ -165,7 +226,7 @@ def generate_paint_by_numbers(
             Image.Resampling.LANCZOS,
         )
 
-    labels, palette = quantize_colors(image, num_colors)
+    labels, palette = quantize_colors(image, num_colors, simplify_factor=simplify_factor)
 
     template = create_outline(labels)
     draw_numbers(template, labels, min_label_area)
@@ -198,9 +259,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Create paint-by-numbers files from an image.")
     parser.add_argument("input", type=Path, help="Source image path")
     parser.add_argument("-o", "--output-dir", type=Path, default=Path("paint-by-numbers"))
-    parser.add_argument("--colors", type=int, default=24, help="Number of paint colors")
-    parser.add_argument("--min-label", type=int, default=1000, help="Minimum area to show a number")
+    parser.add_argument("--colors", type=int, default=18, help="Number of paint colors")
+    parser.add_argument("--min-label", type=int, default=1800, help="Minimum area to show a number")
     parser.add_argument("--max-size", type=int, default=1200, help="Max width/height")
+    parser.add_argument("--simplify", type=int, default=4, help="Shape simplification (2=detailed, 5=clean)")
     args = parser.parse_args()
 
     outputs = generate_paint_by_numbers(
@@ -209,6 +271,7 @@ def main() -> None:
         num_colors=args.colors,
         min_label_area=args.min_label,
         max_dimension=args.max_size,
+        simplify_factor=args.simplify,
     )
 
     print("Generated:")
