@@ -128,14 +128,37 @@ def _majority_filter(values: np.ndarray) -> float:
     return float(vals[np.argmax(counts)])
 
 
-def mode_filter_labels(labels: np.ndarray, passes: int = 1, size: int = 5) -> np.ndarray:
+def _is_skin_tone(r: int, g: int, b: int) -> bool:
+    if max(r, g, b) - min(r, g, b) < 12:
+        return False
+    return r > 60 and g > 30 and b > 15 and r > g and r > b and abs(r - g) > 10
+
+
+def build_face_mask(image: Image.Image) -> np.ndarray:
+    arr = np.asarray(image.convert("RGB"))
+    h, w = arr.shape[:2]
+    mask = np.zeros((h, w), dtype=bool)
+    for y in range(int(h * 0.72)):
+        for x in range(w):
+            r, g, b = (int(v) for v in arr[y, x])
+            if _is_skin_tone(r, g, b):
+                mask[y, x] = True
+    if mask.any():
+        mask = ndimage.binary_dilation(mask, iterations=3)
+    return mask
+
+
+def mode_filter_labels(labels: np.ndarray, passes: int = 1, size: int = 5, face_mask: np.ndarray | None = None) -> np.ndarray:
     out = labels.copy()
     for _ in range(passes):
-        out = generic_filter(out.astype(np.float64), _majority_filter, size=size).astype(np.int32)
+        filtered = generic_filter(out.astype(np.float64), _majority_filter, size=size).astype(np.int32)
+        if face_mask is not None:
+            filtered[face_mask] = out[face_mask]
+        out = filtered
     return out
 
 
-def merge_small_regions(labels: np.ndarray, min_area: int) -> np.ndarray:
+def merge_small_regions(labels: np.ndarray, min_area: int, face_mask: np.ndarray | None = None) -> np.ndarray:
     result = labels.copy()
     h, w = labels.shape
     visited = np.zeros(labels.shape, dtype=bool)
@@ -167,6 +190,8 @@ def merge_small_regions(labels: np.ndarray, min_area: int) -> np.ndarray:
                         neighbor_counts[neighbor] = neighbor_counts.get(neighbor, 0) + 1
 
             if len(pixels) < min_area and neighbor_counts:
+                if face_mask is not None and any(face_mask[cy, cx] for cy, cx in pixels):
+                    continue
                 best_neighbor = max(neighbor_counts, key=neighbor_counts.get)
                 for cy, cx in pixels:
                     result[cy, cx] = best_neighbor
@@ -174,11 +199,14 @@ def merge_small_regions(labels: np.ndarray, min_area: int) -> np.ndarray:
     return result
 
 
-def simplify_labels(labels: np.ndarray) -> np.ndarray:
-    simplified = mode_filter_labels(labels, passes=2, size=5)
+def simplify_labels(labels: np.ndarray, face_mask: np.ndarray | None = None) -> np.ndarray:
+    face_detail = labels.copy()
+    simplified = mode_filter_labels(labels, passes=2, size=5, face_mask=face_mask)
     for _ in range(MERGE_PASSES):
-        simplified = merge_small_regions(simplified, MIN_REGION_AREA)
-        simplified = mode_filter_labels(simplified, passes=1, size=3)
+        simplified = merge_small_regions(simplified, MIN_REGION_AREA, face_mask)
+        simplified = mode_filter_labels(simplified, passes=1, size=3, face_mask=face_mask)
+    if face_mask is not None:
+        simplified[face_mask] = face_detail[face_mask]
     return simplified
 
 
@@ -217,9 +245,14 @@ def map_to_master_palette(image: Image.Image, output_size: tuple[int, int] | Non
         output_size = (full_image.width, full_image.height)
 
     segment_image = resize_to_max(full_image, SEGMENT_SIZE)
-    segment_image = soften_image(segment_image)
-    labels = _labels_from_image(segment_image)
-    labels = simplify_labels(labels)
+    segment_sharp = segment_image
+    segment_soft = soften_image(segment_image)
+    face_mask = build_face_mask(segment_sharp)
+
+    soft_labels = _labels_from_image(segment_soft)
+    sharp_labels = _labels_from_image(segment_sharp)
+    labels = np.where(face_mask, sharp_labels, soft_labels).astype(np.int32)
+    labels = simplify_labels(labels, face_mask)
     labels = upscale_labels(labels, output_size)
     return compact_used_colors(labels, MASTER_PALETTE)
 
@@ -252,9 +285,11 @@ def draw_numbers(
     canvas: Image.Image,
     labels: np.ndarray,
     min_label_area: int,
+    face_mask: np.ndarray | None = None,
 ) -> None:
     draw = ImageDraw.Draw(canvas)
     font = choose_font(max(12, canvas.width // 50))
+    face_min_area = max(70, int(min_label_area / 7))
 
     for color_id in np.unique(labels):
         paint_number = str(int(color_id) + 1)
@@ -265,10 +300,12 @@ def draw_numbers(
 
         sizes = ndimage.sum(mask, component_ids, range(1, count + 1))
         for component, size in enumerate(sizes, start=1):
-            if size < min_label_area:
-                continue
             ys, xs = np.where(component_ids == component)
             cx, cy = int(xs.mean()), int(ys.mean())
+            in_face = face_mask is not None and face_mask[cy, cx]
+            area_limit = face_min_area if in_face else min_label_area
+            if size < area_limit:
+                continue
             bbox = draw.textbbox((0, 0), paint_number, font=font)
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
             x, y = cx - tw // 2, cy - th // 2
@@ -328,8 +365,12 @@ def generate_paint_by_numbers(
     if min_label_area <= 0:
         min_label_area = min_label_area_for_size(full_image.width, full_image.height)
 
+    segment_for_mask = resize_to_max(full_image, SEGMENT_SIZE)
+    face_mask = build_face_mask(segment_for_mask)
+    face_mask = upscale_labels(face_mask.astype(np.int32), (full_image.width, full_image.height)).astype(bool)
+
     template = create_outline(labels)
-    draw_numbers(template, labels, min_label_area)
+    draw_numbers(template, labels, min_label_area, face_mask)
 
     reference = create_reference_image(labels, palette)
     palette_img = create_palette_image(palette)
