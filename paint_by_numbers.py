@@ -12,8 +12,11 @@ from scipy import ndimage
 from scipy.ndimage import gaussian_filter, generic_filter, zoom
 
 SEGMENT_SIZE = 880
+FACE_DETAIL_SIZE = 1200
 MIN_REGION_AREA = 140
 MERGE_PASSES = 5
+FACE_COLORS_MIN = 10
+FACE_COLORS_MAX = 18
 
 
 def _rgb_to_hue(rgb: np.ndarray) -> float:
@@ -134,18 +137,35 @@ def _is_skin_tone(r: int, g: int, b: int) -> bool:
     return r > 60 and g > 30 and b > 15 and r > g and r > b and abs(r - g) > 10
 
 
+def filter_face_skin_blobs(mask: np.ndarray) -> np.ndarray:
+    h, w = mask.shape
+    total = h * w
+    labeled, count = ndimage.label(mask)
+    out = np.zeros_like(mask, dtype=bool)
+    for component in range(1, count + 1):
+        comp = labeled == component
+        size = int(comp.sum())
+        if size < total * 0.0012 or size > total * 0.2:
+            continue
+        ys = np.where(comp)[0]
+        if ys.mean() >= h * 0.72:
+            continue
+        out |= comp
+    if out.any():
+        out = ndimage.binary_dilation(out, iterations=4)
+    return out
+
+
 def build_face_mask(image: Image.Image) -> np.ndarray:
     arr = np.asarray(image.convert("RGB"))
     h, w = arr.shape[:2]
     mask = np.zeros((h, w), dtype=bool)
-    for y in range(int(h * 0.72)):
+    for y in range(int(h * 0.78)):
         for x in range(w):
             r, g, b = (int(v) for v in arr[y, x])
             if _is_skin_tone(r, g, b):
                 mask[y, x] = True
-    if mask.any():
-        mask = ndimage.binary_dilation(mask, iterations=3)
-    return mask
+    return filter_face_skin_blobs(mask)
 
 
 def mode_filter_labels(labels: np.ndarray, passes: int = 1, size: int = 5, face_mask: np.ndarray | None = None) -> np.ndarray:
@@ -200,14 +220,58 @@ def merge_small_regions(labels: np.ndarray, min_area: int, face_mask: np.ndarray
 
 
 def simplify_labels(labels: np.ndarray, face_mask: np.ndarray | None = None) -> np.ndarray:
-    face_detail = labels.copy()
     simplified = mode_filter_labels(labels, passes=2, size=5, face_mask=face_mask)
     for _ in range(MERGE_PASSES):
         simplified = merge_small_regions(simplified, MIN_REGION_AREA, face_mask)
         simplified = mode_filter_labels(simplified, passes=1, size=3, face_mask=face_mask)
-    if face_mask is not None:
-        simplified[face_mask] = face_detail[face_mask]
     return simplified
+
+
+def upscale_local_labels(local: np.ndarray, target_size: tuple[int, int]) -> np.ndarray:
+    src_h, src_w = local.shape
+    tgt_w, tgt_h = target_size
+    out = np.full((tgt_h, tgt_w), -1, dtype=np.int32)
+    scale_x = src_w / tgt_w
+    scale_y = src_h / tgt_h
+    for y in range(tgt_h):
+        for x in range(tgt_w):
+            sx = min(src_w - 1, int(x * scale_x))
+            sy = min(src_h - 1, int(y * scale_y))
+            value = int(local[sy, sx])
+            if value >= 0:
+                out[y, x] = value
+    return out
+
+
+def build_face_kmeans(image: Image.Image, face_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
+    arr = np.asarray(image.convert("RGB"), dtype=np.float32)
+    ys, xs = np.where(face_mask)
+    if len(xs) < 80:
+        return None
+
+    pixels = arr[ys, xs]
+    k = min(FACE_COLORS_MAX, max(FACE_COLORS_MIN, len(pixels) // 400))
+    rng = np.random.default_rng(42)
+    indices = rng.choice(len(pixels), size=k, replace=False)
+    centroids = pixels[indices].copy()
+
+    for _ in range(20):
+        pixel_lab = _rgb_to_lab(pixels)
+        centroid_lab = _rgb_to_lab(centroids)
+        dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
+        assigns = np.argmin(dist, axis=1)
+        for c in range(k):
+            mask = assigns == c
+            if np.any(mask):
+                centroids[c] = pixels[mask].mean(axis=0)
+
+    centroids = np.round(centroids).astype(np.uint8)
+    pixel_lab = _rgb_to_lab(pixels)
+    centroid_lab = _rgb_to_lab(centroids.astype(np.float32))
+    dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
+    local = np.full(face_mask.shape, -1, dtype=np.int32)
+    local[ys, xs] = np.argmin(dist, axis=1)
+    return local, centroids
 
 
 def soften_image(image: Image.Image) -> Image.Image:
@@ -245,16 +309,33 @@ def map_to_master_palette(image: Image.Image, output_size: tuple[int, int] | Non
         output_size = (full_image.width, full_image.height)
 
     segment_image = resize_to_max(full_image, SEGMENT_SIZE)
-    segment_sharp = segment_image
     segment_soft = soften_image(segment_image)
-    face_mask = build_face_mask(segment_sharp)
+    face_mask_seg = build_face_mask(segment_image)
 
-    soft_labels = _labels_from_image(segment_soft)
-    sharp_labels = _labels_from_image(segment_sharp)
-    labels = np.where(face_mask, sharp_labels, soft_labels).astype(np.int32)
-    labels = simplify_labels(labels, face_mask)
-    labels = upscale_labels(labels, output_size)
-    return compact_used_colors(labels, MASTER_PALETTE)
+    bg_labels = simplify_labels(_labels_from_image(segment_soft), face_mask_seg)
+    bg_labels = upscale_labels(bg_labels, output_size)
+    full_face_mask = upscale_labels(face_mask_seg.astype(np.int32), output_size).astype(bool)
+
+    face_image = resize_to_max(full_image, min(max(full_image.size), FACE_DETAIL_SIZE))
+    face_mask_detail = upscale_labels(
+        face_mask_seg.astype(np.int32),
+        (face_image.width, face_image.height),
+    ).astype(bool)
+    face_result = build_face_kmeans(face_image, face_mask_detail)
+
+    palette = MASTER_PALETTE.copy()
+    labels = bg_labels.copy()
+    if face_result is not None:
+        local, centroids = face_result
+        local_full = upscale_local_labels(local, output_size)
+        offset = len(palette)
+        palette = np.vstack([palette, centroids])
+        for y in range(labels.shape[0]):
+            for x in range(labels.shape[1]):
+                if full_face_mask[y, x] and local_full[y, x] >= 0:
+                    labels[y, x] = offset + local_full[y, x]
+
+    return compact_used_colors(labels, palette)
 
 
 def quantize_colors(image: Image.Image, num_colors: int = 0) -> tuple[np.ndarray, np.ndarray]:
@@ -289,7 +370,7 @@ def draw_numbers(
 ) -> None:
     draw = ImageDraw.Draw(canvas)
     font = choose_font(max(12, canvas.width // 50))
-    face_min_area = max(70, int(min_label_area / 7))
+    face_min_area = 35
 
     for color_id in np.unique(labels):
         paint_number = str(int(color_id) + 1)
@@ -366,8 +447,10 @@ def generate_paint_by_numbers(
         min_label_area = min_label_area_for_size(full_image.width, full_image.height)
 
     segment_for_mask = resize_to_max(full_image, SEGMENT_SIZE)
-    face_mask = build_face_mask(segment_for_mask)
-    face_mask = upscale_labels(face_mask.astype(np.int32), (full_image.width, full_image.height)).astype(bool)
+    face_mask = upscale_labels(
+        build_face_mask(segment_for_mask).astype(np.int32),
+        (full_image.width, full_image.height),
+    ).astype(bool)
 
     template = create_outline(labels)
     draw_numbers(template, labels, min_label_area, face_mask)
