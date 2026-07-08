@@ -109,7 +109,7 @@
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
 
     <div class="panel">
-      <p class="tip">Цвета распределены по радуге. Фото сопоставляется с ближайшим оттенком — в палитру попадают только те краски, которые реально есть на фото.</p>
+      <p class="tip">Цвета берутся прямо с вашего фото — образец максимально похож на оригинал. В палитру попадают только те краски, которые реально используются.</p>
       <div class="dropzone" id="dropzone">
         <strong>Перетащите фото сюда</strong><br>
         или нажмите, чтобы выбрать файл
@@ -151,9 +151,10 @@
     const downloadsEl = document.getElementById("downloads");
     const previewsEl = document.getElementById("previews");
 
-    const RAINBOW_COUNT = 24;
-    const MAX_SIZE = 1300;
-    const MIN_LABEL_AREA = 600;
+    const COLOR_COUNT = 28;
+    const MAX_SIZE = 1400;
+    const MIN_LABEL_AREA = 380;
+    const SAMPLE_STEP = 3;
 
     let sourceImage = null;
 
@@ -216,36 +217,8 @@
       return ctx.getImageData(0, 0, width, height);
     }
 
-    function hslToRgb(h, s, l) {
-      h = ((h % 360) + 360) % 360 / 360;
-      if (s === 0) {
-        const v = Math.round(l * 255);
-        return [v, v, v];
-      }
-      const hue2rgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      return [
-        Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
-        Math.round(hue2rgb(p, q, h) * 255),
-        Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
-      ];
-    }
-
-    function buildRainbowPalette(colorCount) {
-      const palette = [];
-      for (let i = 0; i < colorCount; i++) {
-        const hue = (i * 360) / colorCount;
-        palette.push(hslToRgb(hue, 0.94, 0.56));
-      }
-      return palette;
+    function clamp(v, min, max) {
+      return Math.min(max, Math.max(min, v));
     }
 
     function rgbToHue(rgb) {
@@ -330,6 +303,44 @@
         }
       }
       return best;
+    }
+
+    function kmeansFromPhoto(imageData, k, sampleStep) {
+      const { data } = imageData;
+      const pixels = [];
+      for (let i = 0; i < data.length; i += 4 * sampleStep) {
+        pixels.push([data[i], data[i + 1], data[i + 2]]);
+      }
+
+      const centroids = [];
+      const used = new Set();
+      while (centroids.length < k) {
+        const idx = Math.floor(Math.random() * pixels.length);
+        if (used.has(idx)) continue;
+        used.add(idx);
+        centroids.push(pixels[idx].slice());
+      }
+
+      for (let iter = 0; iter < 18; iter++) {
+        const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
+        for (let i = 0; i < pixels.length; i++) {
+          const label = nearestCentroid(pixels[i], centroids);
+          sums[label][0] += pixels[i][0];
+          sums[label][1] += pixels[i][1];
+          sums[label][2] += pixels[i][2];
+          sums[label][3] += 1;
+        }
+        for (let c = 0; c < k; c++) {
+          if (sums[c][3] === 0) continue;
+          centroids[c] = [
+            Math.round(sums[c][0] / sums[c][3]),
+            Math.round(sums[c][1] / sums[c][3]),
+            Math.round(sums[c][2] / sums[c][3]),
+          ];
+        }
+      }
+
+      return centroids;
     }
 
     function buildLabelMap(imageData, centroids) {
@@ -512,10 +523,10 @@
 
       await new Promise((resolve) => setTimeout(resolve, 30));
 
-      const rainbowPool = buildRainbowPalette(RAINBOW_COUNT);
       const imageData = resizeImage(sourceImage, MAX_SIZE);
-      const rawLabelMap = buildLabelMap(imageData, rainbowPool);
-      const { labelMap, palette } = compactUsedColors(rawLabelMap, rainbowPool);
+      const colorPool = kmeansFromPhoto(imageData, COLOR_COUNT, SAMPLE_STEP);
+      const rawLabelMap = buildLabelMap(imageData, colorPool);
+      const { labelMap, palette } = compactUsedColors(rawLabelMap, colorPool);
       const templateCanvas = drawTemplate(labelMap, palette, MIN_LABEL_AREA);
       const referenceCanvas = drawReference(labelMap, palette);
       const paletteCanvas = drawPalette(palette);

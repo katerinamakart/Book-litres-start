@@ -4,22 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import colorsys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
-
-
-def build_rainbow_palette(count: int) -> np.ndarray:
-    count = max(12, min(count, 24))
-    colors = []
-    for i in range(count):
-        hue = i / count
-        r, g, b = colorsys.hls_to_rgb(hue, 0.56, 0.94)
-        colors.append([int(round(r * 255)), int(round(g * 255)), int(round(b * 255))])
-    return np.array(colors, dtype=np.uint8)
 
 
 def _rgb_to_hue(rgb: np.ndarray) -> float:
@@ -47,20 +36,6 @@ def compact_used_colors(labels: np.ndarray, palette: np.ndarray) -> tuple[np.nda
     return compact_labels, compact_palette
 
 
-def map_to_rainbow_palette(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    palette = build_rainbow_palette(num_colors)
-    pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
-    pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
-    palette_lab = _rgb_to_lab(palette.astype(np.float32))
-    dist = np.sum((pixel_lab[:, None, :] - palette_lab[None, :, :]) ** 2, axis=2)
-    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
-    return compact_used_colors(labels, palette)
-
-
-def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    return map_to_rainbow_palette(image, num_colors)
-
-
 def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     rgb = np.clip(rgb / 255.0, 0.0, 1.0)
     mask = rgb > 0.04045
@@ -75,6 +50,35 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
 
     fx, fy, fz = f(x), f(y), f(z)
     return np.stack([(116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz)], axis=-1)
+
+
+def kmeans_from_photo(image: Image.Image, num_colors: int, sample_step: int = 3) -> tuple[np.ndarray, np.ndarray]:
+    pixels = np.asarray(image.convert("RGB"), dtype=np.float32)
+    sampled = pixels[::sample_step, ::sample_step].reshape(-1, 3)
+    rng = np.random.default_rng(42)
+    indices = rng.choice(len(sampled), size=num_colors, replace=False)
+    centroids = sampled[indices].copy()
+
+    for _ in range(18):
+        pixel_lab = _rgb_to_lab(sampled)
+        centroid_lab = _rgb_to_lab(centroids)
+        dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
+        labels = np.argmin(dist, axis=1)
+        for c in range(num_colors):
+            mask = labels == c
+            if np.any(mask):
+                centroids[c] = sampled[mask].mean(axis=0)
+
+    centroids = np.round(centroids).astype(np.uint8)
+    pixel_lab = _rgb_to_lab(pixels.reshape(-1, 3))
+    centroid_lab = _rgb_to_lab(centroids.astype(np.float32))
+    dist = np.sum((pixel_lab[:, None, :] - centroid_lab[None, :, :]) ** 2, axis=2)
+    labels = np.argmin(dist, axis=1).reshape(pixels.shape[:2]).astype(np.int32)
+    return compact_used_colors(labels, centroids)
+
+
+def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
+    return kmeans_from_photo(image, num_colors)
 
 
 def create_outline(labels: np.ndarray) -> Image.Image:
@@ -158,9 +162,9 @@ def create_reference_image(labels: np.ndarray, palette: np.ndarray) -> Image.Ima
 def generate_paint_by_numbers(
     input_path: Path,
     output_dir: Path,
-    num_colors: int = 24,
-    min_label_area: int = 600,
-    max_dimension: int = 1300,
+    num_colors: int = 28,
+    min_label_area: int = 380,
+    max_dimension: int = 1400,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     image = Image.open(input_path)
@@ -212,9 +216,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Create paint-by-numbers files from an image.")
     parser.add_argument("input", type=Path, help="Source image path")
     parser.add_argument("-o", "--output-dir", type=Path, default=Path("paint-by-numbers"))
-    parser.add_argument("--colors", type=int, default=24, help="Number of fixed storybook colors (12-24)")
-    parser.add_argument("--min-label", type=int, default=600, help="Minimum area to show a number")
-    parser.add_argument("--max-size", type=int, default=1300, help="Max width/height")
+    parser.add_argument("--colors", type=int, default=28, help="Number of colors extracted from photo")
+    parser.add_argument("--min-label", type=int, default=380, help="Minimum area to show a number")
+    parser.add_argument("--max-size", type=int, default=1400, help="Max width/height")
     args = parser.parse_args()
 
     outputs = generate_paint_by_numbers(
