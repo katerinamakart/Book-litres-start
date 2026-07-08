@@ -11,10 +11,55 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 
+def enhance_image(image: Image.Image, saturation: float = 2.1, contrast: float = 1.22) -> Image.Image:
+    """Make colors more vivid before quantization."""
+    from PIL import ImageEnhance
+
+    image = ImageEnhance.Contrast(image).enhance(contrast)
+    return ImageEnhance.Color(image).enhance(saturation)
+
+
+def vibrant_palette(palette: np.ndarray, min_saturation: float = 0.38) -> np.ndarray:
+    """Boost palette saturation while keeping whites and near-grays natural."""
+    result = palette.astype(np.float32).copy()
+    for i, rgb in enumerate(result):
+        r, g, b = rgb / 255.0
+        max_c = max(r, g, b)
+        min_c = min(r, g, b)
+        delta = max_c - min_c
+        lightness = (max_c + min_c) / 2.0
+        if delta < 0.03 or lightness > 0.94:
+            continue
+
+        saturation = delta / (1.0 - abs(2.0 * lightness - 1.0) + 1e-6)
+        boosted = min(1.0, saturation * 1.85)
+        boosted = max(min_saturation, boosted)
+
+        if lightness < 0.5:
+            chroma = boosted * (2.0 * lightness)
+        else:
+            chroma = boosted * (2.0 - 2.0 * lightness)
+
+        # Simple RGB spread from gray axis.
+        gray = lightness
+        scale = chroma / (delta + 1e-6)
+        result[i, 0] = np.clip(gray + (r - gray) * scale, 0, 1) * 255
+        result[i, 1] = np.clip(gray + (g - gray) * scale, 0, 1) * 255
+        result[i, 2] = np.clip(gray + (b - gray) * scale, 0, 1) * 255
+
+    return result.astype(np.uint8)
+
+
 def quantize_colors(image: Image.Image, num_colors: int) -> tuple[np.ndarray, np.ndarray]:
-    quantized = image.convert("RGB").quantize(colors=num_colors, method=Image.Quantize.MEDIANCUT)
-    palette = np.array(quantized.getpalette(), dtype=np.uint8).reshape(-1, 3)[:num_colors]
-    labels = np.array(quantized, dtype=np.int32)
+    enhanced = enhance_image(image)
+    quantized = enhanced.quantize(colors=num_colors, method=Image.Quantize.MEDIANCUT)
+    raw_palette = np.array(quantized.getpalette(), dtype=np.uint8).reshape(-1, 3)[:num_colors]
+    palette = vibrant_palette(raw_palette)
+
+    pixels = np.array(enhanced, dtype=np.float32).reshape(-1, 3)
+    palette_f = palette.astype(np.float32)
+    labels = np.argmin(((pixels[:, None, :] - palette_f[None, :, :]) ** 2).sum(axis=2), axis=1)
+    labels = labels.astype(np.int32).reshape(enhanced.height, enhanced.width)
     return labels, palette
 
 
