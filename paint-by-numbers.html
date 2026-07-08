@@ -97,13 +97,49 @@
       background: white;
     }
     .status { margin-top: 12px; color: var(--muted); min-height: 1.5em; }
-    .hidden { display: none; }
+    .example-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .example-card {
+      text-align: center;
+    }
+    .example-card p {
+      margin: 8px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .tip {
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      background: #eff6ff;
+      border-radius: 10px;
+      color: #1e3a8a;
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Картина по номерам</h1>
     <p class="lead">Загрузите своё фото — получите шаблон для раскрашивания, образец и палитру цветов.</p>
+
+    <div class="panel">
+      <h2 style="margin:0 0 10px; font-size:1.1rem;">Как должно выглядеть</h2>
+      <p class="tip">Хорошая картина по номерам — это <strong>крупные ровные зоны</strong> и немного линий. Не должно быть «мелкой сетки» по всему небу и горам.</p>
+      <div class="example-grid">
+        <div class="example-card">
+          <img src="paint-by-numbers/example-clean-template.png" alt="Пример чистого шаблона">
+          <p>Так правильно — крупные зоны</p>
+        </div>
+        <div class="example-card">
+          <img src="paint-by-numbers/example-clean-reference.png" alt="Пример цветного образца">
+          <p>Цветной образец</p>
+        </div>
+      </div>
+    </div>
 
     <div class="panel">
       <div class="dropzone" id="dropzone">
@@ -114,12 +150,12 @@
 
       <div class="controls">
         <div>
-          <label for="colors">Количество цветов: <span id="colorsValue">24</span></label>
-          <input id="colors" type="range" min="12" max="36" value="24">
+          <label for="colors">Количество цветов: <span id="colorsValue">18</span></label>
+          <input id="colors" type="range" min="12" max="30" value="18">
         </div>
         <div>
-          <label for="detail">Детализация: <span id="detailValue">средняя</span></label>
-          <input id="detail" type="range" min="1" max="3" value="2">
+          <label for="simplicity">Простота линий: <span id="simplicityValue">чистый шаблон</span></label>
+          <input id="simplicity" type="range" min="1" max="3" value="3">
         </div>
         <div>
           <label for="vibrancy">Яркость цветов: <span id="vibrancyValue">яркие</span></label>
@@ -161,23 +197,22 @@
     const downloadsEl = document.getElementById("downloads");
     const previewsEl = document.getElementById("previews");
     const colorsInput = document.getElementById("colors");
-    const detailInput = document.getElementById("detail");
+    const simplicityInput = document.getElementById("simplicity");
+    const simplicityValue = document.getElementById("simplicityValue");
     const colorsValue = document.getElementById("colorsValue");
-    const detailValue = document.getElementById("detailValue");
-
     const vibrancyInput = document.getElementById("vibrancy");
     const vibrancyValue = document.getElementById("vibrancyValue");
 
     let sourceImage = null;
 
-    const detailLabels = ["низкая", "средняя", "высокая"];
+    const simplicityLabels = ["детально", "средне", "чистый шаблон"];
     const vibrancyLabels = ["мягкие", "средние", "яркие"];
 
     colorsInput.addEventListener("input", () => {
       colorsValue.textContent = colorsInput.value;
     });
-    detailInput.addEventListener("input", () => {
-      detailValue.textContent = detailLabels[detailInput.value - 1];
+    simplicityInput.addEventListener("input", () => {
+      simplicityValue.textContent = simplicityLabels[simplicityInput.value - 1];
     });
     vibrancyInput.addEventListener("input", () => {
       vibrancyValue.textContent = vibrancyLabels[vibrancyInput.value - 1];
@@ -374,6 +409,62 @@
       return { width, height, labels };
     }
 
+    function modeFilterLabels(labelMap, size = 5) {
+      const { width, height, labels } = labelMap;
+      const radius = Math.floor(size / 2);
+      const filtered = new Int32Array(labels.length);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const counts = new Map();
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+              const ny = Math.min(height - 1, Math.max(0, y + dy));
+              const nx = Math.min(width - 1, Math.max(0, x + dx));
+              const value = labels[ny * width + nx];
+              counts.set(value, (counts.get(value) || 0) + 1);
+            }
+          }
+          let best = labels[y * width + x];
+          let bestCount = 0;
+          counts.forEach((count, value) => {
+            if (count > bestCount) {
+              bestCount = count;
+              best = value;
+            }
+          });
+          filtered[y * width + x] = best;
+        }
+      }
+      return { width, height, labels: filtered };
+    }
+
+    function buildSimplifiedLabelMap(imageData, centroids, simplifyFactor) {
+      const sw = Math.max(1, Math.round(imageData.width / simplifyFactor));
+      const sh = Math.max(1, Math.round(imageData.height / simplifyFactor));
+      const smallCanvas = document.createElement("canvas");
+      smallCanvas.width = sw;
+      smallCanvas.height = sh;
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = imageData.width;
+      tempCanvas.height = imageData.height;
+      tempCanvas.getContext("2d").putImageData(imageData, 0, 0);
+      smallCanvas.getContext("2d").drawImage(tempCanvas, 0, 0, sw, sh);
+      const smallData = smallCanvas.getContext("2d").getImageData(0, 0, sw, sh);
+      let smallMap = buildLabelMap(smallData, centroids);
+      smallMap = modeFilterLabels(smallMap, 5);
+      smallMap = modeFilterLabels(smallMap, 5);
+
+      const labels = new Int32Array(imageData.width * imageData.height);
+      for (let y = 0; y < imageData.height; y++) {
+        for (let x = 0; x < imageData.width; x++) {
+          const sx = Math.min(sw - 1, Math.floor((x * sw) / imageData.width));
+          const sy = Math.min(sh - 1, Math.floor((y * sh) / imageData.height));
+          labels[y * imageData.width + x] = smallMap.labels[sy * sw + sx];
+        }
+      }
+      return modeFilterLabels({ width: imageData.width, height: imageData.height, labels }, 3);
+    }
+
     function connectedComponents(labels, width, height, colorId) {
       const visited = new Uint8Array(labels.length);
       const components = [];
@@ -546,13 +637,14 @@
       await new Promise((resolve) => setTimeout(resolve, 30));
 
       const colors = Number(colorsInput.value);
-      const detail = Number(detailInput.value);
+      const simplicity = Number(simplicityInput.value);
       const vibrancy = Number(vibrancyInput.value);
       const satFactor = vibrancy === 1 ? 1.45 : vibrancy === 2 ? 1.85 : 2.25;
       const contrast = vibrancy === 1 ? 1.08 : vibrancy === 2 ? 1.15 : 1.24;
-      const maxSize = detail === 1 ? 900 : detail === 2 ? 1100 : 1300;
-      const minLabelArea = detail === 1 ? 1800 : detail === 2 ? 1000 : 600;
-      const sampleStep = detail === 1 ? 6 : detail === 2 ? 4 : 3;
+      const simplifyFactor = simplicity === 1 ? 2 : simplicity === 2 ? 3 : 5;
+      const maxSize = simplicity === 1 ? 1100 : simplicity === 2 ? 1000 : 900;
+      const minLabelArea = simplicity === 1 ? 1200 : simplicity === 2 ? 2000 : 3200;
+      const sampleStep = simplicity === 1 ? 4 : simplicity === 2 ? 5 : 6;
 
       const imageData = enhanceImageData(
         resizeImage(sourceImage, maxSize),
@@ -566,7 +658,7 @@
 
       const { centroids: rawCentroids } = kmeans(pixels, colors);
       const centroids = vibrantCentroids(rawCentroids);
-      const labelMap = buildLabelMap(imageData, centroids);
+      const labelMap = buildSimplifiedLabelMap(imageData, centroids, simplifyFactor);
       const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
       const referenceCanvas = drawReference(labelMap, centroids);
       const paletteCanvas = drawPalette(centroids);
