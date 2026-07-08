@@ -128,7 +128,7 @@
 
     <div class="panel">
       <h2 style="margin:0 0 10px; font-size:1.1rem;">Как должно выглядеть</h2>
-      <p class="tip">Хороший баланс: <strong>лицо и люди детально</strong>, а небо и горы — крупными зонами без лишних линий.</p>
+      <p class="tip">Если кожа стала оранжевой или стол «рябит» линиями — обновите страницу и создайте заново. Алгоритм теперь отдельно обрабатывает лицо, кожу и текстуры (стекло, плетение).</p>
       <div class="example-grid">
         <div class="example-card">
           <img src="paint-by-numbers/example-clean-template.png" alt="Пример чистого шаблона">
@@ -234,18 +234,33 @@
     });
     generateBtn.addEventListener("click", generate);
 
-    function loadFile(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
+    async function loadFile(file) {
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext("2d").drawImage(bitmap, 0, 0);
         const img = new Image();
         img.onload = () => {
           sourceImage = img;
           generateBtn.disabled = false;
           statusEl.textContent = `Загружено: ${file.name} (${img.width}×${img.height})`;
         };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+        img.src = canvas.toDataURL("image/jpeg", 0.95);
+      } catch {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            sourceImage = img;
+            generateBtn.disabled = false;
+            statusEl.textContent = `Загружено: ${file.name} (${img.width}×${img.height})`;
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     function resizeImage(img, maxSize) {
@@ -301,14 +316,226 @@
       ];
     }
 
+    function isSkinPixel(r, g, b) {
+      const [h, s, l] = rgbToHsl(r, g, b);
+      return h <= 48 && s >= 0.1 && s <= 0.62 && l >= 0.22 && l <= 0.9 && r > g && r > b * 0.95;
+    }
+
+    function isSkinColor(rgb) {
+      return isSkinPixel(rgb[0], rgb[1], rgb[2]);
+    }
+
+    function luminance(rgb) {
+      return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+    }
+
+    function rgbToLab(r, g, b) {
+      let rr = r / 255, gg = g / 255, bb = b / 255;
+      rr = rr > 0.04045 ? ((rr + 0.055) / 1.055) ** 2.4 : rr / 12.92;
+      gg = gg > 0.04045 ? ((gg + 0.055) / 1.055) ** 2.4 : gg / 12.92;
+      bb = bb > 0.04045 ? ((bb + 0.055) / 1.055) ** 2.4 : bb / 12.92;
+      const x = (rr * 0.4124 + gg * 0.3576 + bb * 0.1805) / 0.95047;
+      const y = (rr * 0.2126 + gg * 0.7152 + bb * 0.0722) / 1.0;
+      const z = (rr * 0.0193 + gg * 0.1192 + bb * 0.9505) / 1.08883;
+      const fx = x > 0.008856 ? x ** (1 / 3) : 7.787 * x + 16 / 116;
+      const fy = y > 0.008856 ? y ** (1 / 3) : 7.787 * y + 16 / 116;
+      const fz = z > 0.008856 ? z ** (1 / 3) : 7.787 * z + 16 / 116;
+      return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+    }
+
+    function labDist(a, b) {
+      const la = rgbToLab(a[0], a[1], a[2]);
+      const lb = rgbToLab(b[0], b[1], b[2]);
+      const dl = la[0] - lb[0];
+      const da = la[1] - lb[1];
+      const db = la[2] - lb[2];
+      return dl * dl + da * da + db * db;
+    }
+
     function enhanceRgb(rgb, satFactor, contrast) {
       const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
       if (s < 0.04 || l > 0.95) {
         return rgb.slice();
       }
-      const newS = Math.min(1, Math.max(0.35, s * satFactor));
+      if (isSkinColor(rgb)) {
+        const newS = Math.min(0.5, Math.max(0.12, s * 1.1));
+        const newL = Math.min(0.9, Math.max(0.2, (l - 0.5) * 1.05 + 0.5));
+        return hslToRgb(h, newS, newL);
+      }
+      const newS = Math.min(1, Math.max(0.3, s * satFactor));
       const newL = Math.min(0.96, Math.max(0.06, (l - 0.5) * contrast + 0.5));
       return hslToRgb(h, newS, newL);
+    }
+
+    function vibrantCentroids(centroids) {
+      return centroids.map((rgb) =>
+        isSkinColor(rgb) ? enhanceRgb(rgb, 1.05, 1.02) : enhanceRgb(rgb, 1.4, 1.08)
+      );
+    }
+
+    function suppressTexture(imageData) {
+      const { width, height, data } = imageData;
+      const gray = new Float32Array(width * height);
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      }
+
+      const variance = new Float32Array(width * height);
+      for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
+          let sum = 0;
+          let sumSq = 0;
+          let count = 0;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              const v = gray[(y + dy) * width + (x + dx)];
+              sum += v;
+              sumSq += v * v;
+              count += 1;
+            }
+          }
+          const mean = sum / count;
+          variance[y * width + x] = sumSq / count - mean * mean;
+        }
+      }
+
+      const sorted = Array.from(variance).sort((a, b) => a - b);
+      const threshold = sorted[Math.floor(sorted.length * 0.55)] || 0;
+      const blurred = boxBlur(imageData, 6);
+      const out = new ImageData(
+        new Uint8ClampedArray(data),
+        width,
+        height
+      );
+
+      for (let p = 0; p < width * height; p++) {
+        const blend = variance[p] > threshold ? 0.82 : 0.15;
+        const i = p * 4;
+        out.data[i] = Math.round(data[i] * (1 - blend) + blurred.data[i] * blend);
+        out.data[i + 1] = Math.round(data[i + 1] * (1 - blend) + blurred.data[i + 1] * blend);
+        out.data[i + 2] = Math.round(data[i + 2] * (1 - blend) + blurred.data[i + 2] * blend);
+      }
+      return out;
+    }
+
+    function boxBlur(imageData, radius) {
+      const { width, height, data } = imageData;
+      const out = new Uint8ClampedArray(data);
+      for (let channel = 0; channel < 3; channel++) {
+        const temp = new Float32Array(width * height);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let sum = 0;
+            let count = 0;
+            for (let dx = -radius; dx <= radius; dx++) {
+              const nx = Math.min(width - 1, Math.max(0, x + dx));
+              sum += data[(y * width + nx) * 4 + channel];
+              count += 1;
+            }
+            temp[y * width + x] = sum / count;
+          }
+        }
+        for (let x = 0; x < width; x++) {
+          for (let y = 0; y < height; y++) {
+            let sum = 0;
+            let count = 0;
+            for (let dy = -radius; dy <= radius; dy++) {
+              const ny = Math.min(height - 1, Math.max(0, y + dy));
+              sum += temp[ny * width + x];
+              count += 1;
+            }
+            out[(y * width + x) * 4 + channel] = Math.round(sum / count);
+          }
+        }
+      }
+      return new ImageData(out, width, height);
+    }
+
+    function collectSkinPalette(imageData) {
+      const samples = [];
+      const { data } = imageData;
+      for (let i = 0; i < data.length; i += 4) {
+        if (isSkinPixel(data[i], data[i + 1], data[i + 2])) {
+          samples.push([data[i], data[i + 1], data[i + 2]]);
+        }
+      }
+      if (samples.length < 80) return { tones: null, indices: [] };
+      samples.sort((a, b) => luminance(a) - luminance(b));
+      const tones = [
+        samples[Math.floor(samples.length * 0.15)],
+        samples[Math.floor(samples.length * 0.5)],
+        samples[Math.floor(samples.length * 0.85)],
+      ];
+      return { tones, indices: [] };
+    }
+
+    function preparePalette(centroids, skinInfo) {
+      const palette = centroids.map((c) => c.slice());
+      if (!skinInfo.tones) {
+        const indices = palette
+          .map((c, i) => ({ i, skin: isSkinColor(c) }))
+          .filter((x) => x.skin)
+          .map((x) => x.i);
+        return { palette, skinIndices: indices.length ? indices : [0] };
+      }
+
+      const replace = [];
+      palette.forEach((c, i) => {
+        const [h, s] = rgbToHsl(c[0], c[1], c[2]);
+        if (h < 45 && s > 0.45) replace.push({ i, score: s });
+      });
+      replace.sort((a, b) => b.score - a.score);
+      const skinIndices = [];
+      skinInfo.tones.forEach((tone, n) => {
+        const target = replace[n] ? replace[n].i : n;
+        palette[target] = tone.slice();
+        skinIndices.push(target);
+      });
+      return { palette, skinIndices: [...new Set(skinIndices)] };
+    }
+
+    function mergeSimilarCentroids(centroids, threshold = 900) {
+      const merged = centroids.map((c) => c.slice());
+      const remap = merged.map((_, i) => i);
+      for (let i = 0; i < merged.length; i++) {
+        for (let j = i + 1; j < merged.length; j++) {
+          if (labDist(merged[i], merged[j]) < threshold) {
+            remap[j] = remap[i];
+            merged[i] = [
+              Math.round((merged[i][0] + merged[j][0]) / 2),
+              Math.round((merged[i][1] + merged[j][1]) / 2),
+              Math.round((merged[i][2] + merged[j][2]) / 2),
+            ];
+          }
+        }
+      }
+      return { centroids: merged, remap };
+    }
+
+    function nearestCentroidSmart(rgb, centroids, skinIndices) {
+      const skin = isSkinPixel(rgb[0], rgb[1], rgb[2]);
+      if (skin && skinIndices.length) {
+        let best = skinIndices[0];
+        let bestDist = Infinity;
+        for (const i of skinIndices) {
+          const d = labDist(rgb, centroids[i]);
+          if (d < bestDist) {
+            bestDist = d;
+            best = i;
+          }
+        }
+        return best;
+      }
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < centroids.length; i++) {
+        const d = labDist(rgb, centroids[i]);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      return best;
     }
 
     function enhanceImageData(imageData, satFactor, contrast) {
@@ -330,17 +557,6 @@
       return copy;
     }
 
-    function vibrantCentroids(centroids) {
-      return centroids.map((rgb) => enhanceRgb(rgb, 1.55, 1.1));
-    }
-
-    function rgbDist(a, b) {
-      const dr = a[0] - b[0];
-      const dg = a[1] - b[1];
-      const db = a[2] - b[2];
-      return dr * dr + dg * dg + db * db;
-    }
-
     function kmeans(pixels, k, iterations = 12) {
       const centroids = [];
       const used = new Set();
@@ -357,7 +573,7 @@
           let best = 0;
           let bestDist = Infinity;
           for (let c = 0; c < centroids.length; c++) {
-            const d = rgbDist(pixels[i], centroids[c]);
+            const d = labDist(pixels[i], centroids[c]);
             if (d < bestDist) {
               bestDist = d;
               best = c;
@@ -387,24 +603,15 @@
       return { centroids, labels };
     }
 
-    function nearestCentroid(rgb, centroids) {
-      let best = 0;
-      let bestDist = Infinity;
-      for (let i = 0; i < centroids.length; i++) {
-        const d = rgbDist(rgb, centroids[i]);
-        if (d < bestDist) {
-          bestDist = d;
-          best = i;
-        }
-      }
-      return best;
-    }
-
-    function buildLabelMap(imageData, centroids) {
+    function buildLabelMap(imageData, centroids, skinIndices) {
       const { width, height, data } = imageData;
       const labels = new Int32Array(width * height);
       for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-        labels[p] = nearestCentroid([data[i], data[i + 1], data[i + 2]], centroids);
+        labels[p] = nearestCentroidSmart(
+          [data[i], data[i + 1], data[i + 2]],
+          centroids,
+          skinIndices
+        );
       }
       return { width, height, labels };
     }
@@ -438,7 +645,7 @@
       return { width, height, labels: filtered };
     }
 
-    function downscaleImageData(imageData, factor, centroids, smoothPasses = 1) {
+    function downscaleImageData(imageData, factor, centroids, skinIndices, smoothPasses = 1) {
       const sw = Math.max(1, Math.round(imageData.width / factor));
       const sh = Math.max(1, Math.round(imageData.height / factor));
       const smallCanvas = document.createElement("canvas");
@@ -449,7 +656,7 @@
       tempCanvas.height = imageData.height;
       tempCanvas.getContext("2d").putImageData(imageData, 0, 0);
       smallCanvas.getContext("2d").drawImage(tempCanvas, 0, 0, sw, sh);
-      let smallMap = buildLabelMap(smallCanvas.getContext("2d").getImageData(0, 0, sw, sh), centroids);
+      let smallMap = buildLabelMap(smallCanvas.getContext("2d").getImageData(0, 0, sw, sh), centroids, skinIndices);
       for (let i = 0; i < smoothPasses; i++) {
         smallMap = modeFilterLabels(smallMap, smoothPasses >= 2 ? 5 : 3);
       }
@@ -505,11 +712,11 @@
       return mask;
     }
 
-    function buildAdaptiveLabelMap(imageData, centroids, simplifyFactor) {
+    function buildAdaptiveLabelMap(imageData, centroids, skinIndices, simplifyFactor) {
       const fineFactor = Math.max(1, simplifyFactor - 1);
       const coarseFactor = simplifyFactor + 1;
-      const fineMap = downscaleImageData(imageData, fineFactor, centroids, 1);
-      const coarseMap = downscaleImageData(imageData, coarseFactor, centroids, 2);
+      const fineMap = downscaleImageData(imageData, fineFactor, centroids, skinIndices, 1);
+      const coarseMap = downscaleImageData(imageData, coarseFactor, centroids, skinIndices, 2);
       const mask = buildDetailMask(imageData);
 
       const sorted = Array.from(mask).sort((a, b) => a - b);
@@ -696,26 +903,28 @@
       const colors = Number(colorsInput.value);
       const simplicity = Number(simplicityInput.value);
       const vibrancy = Number(vibrancyInput.value);
-      const satFactor = vibrancy === 1 ? 1.45 : vibrancy === 2 ? 1.85 : 2.25;
-      const contrast = vibrancy === 1 ? 1.08 : vibrancy === 2 ? 1.15 : 1.24;
+      const satFactor = vibrancy === 1 ? 1.35 : vibrancy === 2 ? 1.65 : 1.9;
+      const contrast = vibrancy === 1 ? 1.06 : vibrancy === 2 ? 1.1 : 1.16;
       const simplifyFactor = simplicity === 1 ? 2 : simplicity === 2 ? 3 : 4;
       const maxSize = simplicity === 1 ? 1100 : simplicity === 2 ? 1050 : 950;
-      const minLabelArea = simplicity === 1 ? 900 : simplicity === 2 ? 1400 : 2200;
+      const minLabelArea = simplicity === 1 ? 800 : simplicity === 2 ? 1200 : 1800;
       const sampleStep = simplicity === 1 ? 3 : simplicity === 2 ? 4 : 5;
 
-      const imageData = enhanceImageData(
-        resizeImage(sourceImage, maxSize),
-        satFactor,
-        contrast
-      );
+      const rawData = resizeImage(sourceImage, maxSize);
+      const smoothed = suppressTexture(rawData);
+      const imageData = enhanceImageData(smoothed, satFactor, contrast);
+      const skinInfo = collectSkinPalette(rawData);
+
       const pixels = [];
       for (let i = 0; i < imageData.data.length; i += 4 * sampleStep) {
         pixels.push([imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]]);
       }
 
       const { centroids: rawCentroids } = kmeans(pixels, colors);
-      const centroids = vibrantCentroids(rawCentroids);
-      const labelMap = buildAdaptiveLabelMap(imageData, centroids, simplifyFactor);
+      const vibrant = vibrantCentroids(rawCentroids);
+      const { centroids: mergedCentroids } = mergeSimilarCentroids(vibrant);
+      const { palette: centroids, skinIndices } = preparePalette(mergedCentroids, skinInfo);
+      const labelMap = buildAdaptiveLabelMap(imageData, centroids, skinIndices, simplifyFactor);
       const templateCanvas = drawTemplate(labelMap, centroids, minLabelArea);
       const referenceCanvas = drawReference(labelMap, centroids);
       const paletteCanvas = drawPalette(centroids);

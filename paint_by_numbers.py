@@ -7,14 +7,47 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from scipy import ndimage
 
 
-def enhance_image(image: Image.Image, saturation: float = 2.1, contrast: float = 1.22) -> Image.Image:
-    """Make colors more vivid before quantization."""
+def is_skin_rgb(rgb: np.ndarray) -> bool:
+    r, g, b = rgb / 255.0
+    max_c = max(r, g, b)
+    min_c = min(r, g, b)
+    delta = max_c - min_c
+    if max_c == 0:
+        return False
+    h = 0.0
+    if delta:
+        if max_c == r:
+            h = ((g - b) / delta) % 6
+        elif max_c == g:
+            h = (b - r) / delta + 2
+        else:
+            h = (r - g) / delta + 4
+        h *= 60
+    lightness = (max_c + min_c) / 2
+    saturation = delta / (1 - abs(2 * lightness - 1) + 1e-6)
+    return h <= 48 and 0.1 <= saturation <= 0.62 and 0.22 <= lightness <= 0.9 and r > g and r > b * 0.95
+
+
+def suppress_texture(image: Image.Image) -> Image.Image:
+    arr = np.array(image, dtype=np.float32)
+    gray = arr.mean(axis=2)
+    variance = ndimage.generic_filter(gray, np.var, size=5, mode="nearest")
+    blurred = np.array(image.filter(ImageFilter.GaussianBlur(radius=2)), dtype=np.float32)
+    threshold = np.percentile(variance, 55)
+    mask = (variance > threshold)[..., None]
+    mixed = np.where(mask, arr * 0.18 + blurred * 0.82, arr * 0.85 + blurred * 0.15)
+    return Image.fromarray(np.clip(mixed, 0, 255).astype(np.uint8))
+
+
+def enhance_image(image: Image.Image, saturation: float = 1.9, contrast: float = 1.16) -> Image.Image:
+    """Make colors vivid while keeping textures calmer."""
     from PIL import ImageEnhance
 
+    image = suppress_texture(image)
     image = ImageEnhance.Contrast(image).enhance(contrast)
     return ImageEnhance.Color(image).enhance(saturation)
 
@@ -29,6 +62,8 @@ def vibrant_palette(palette: np.ndarray, min_saturation: float = 0.38) -> np.nda
         delta = max_c - min_c
         lightness = (max_c + min_c) / 2.0
         if delta < 0.03 or lightness > 0.94:
+            continue
+        if is_skin_rgb(rgb):
             continue
 
         saturation = delta / (1.0 - abs(2.0 * lightness - 1.0) + 1e-6)
