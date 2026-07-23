@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Приключения Кап-Кап — детская книга Екатерины Макаровой</title>
-  <meta name="description" content="«Приключения Кап-Кап» — добрая история о круговороте воды. Ритмичные стихи, акварельные иллюстрации и простые опыты для детей от 3 лет." />
+  <meta name="description" content="«Приключения Кап-Кап» — добрая история о превращениях воды. Акварельные иллюстрации, блок «Знаешь ли ты?» и простые опыты для детей от 3 лет." />
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -68,12 +68,10 @@
         <span class="hero__badge">Детская книга · 2026</span>
         <div class="hero__soon">Скоро в продаже</div>
         <h1 class="hero__title">Приключения <em>Кап-Кап</em></h1>
-        <p class="hero__subtitle">
-          Вода, которая всегда рядом — добрая история о круговороте воды
-        </p>
+        <p class="hero__subtitle">Вода, которая всегда рядом</p>
         <div class="hero__meta">
           <span class="hero__meta-item">👶 от 3 лет</span>
-          <span class="hero__meta-item">📖 Стихи + опыты</span>
+          <span class="hero__meta-item">📖 Сказка + опыты</span>
           <span class="hero__meta-item">🎨 Акварель</span>
         </div>
         <div class="hero__cta-buttons">
@@ -106,6 +104,42 @@
   <!-- Wave -->
   <div class="wave-divider">
     <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,10 1440,40 L1440,80 L0,80 Z" fill="#fff8f0"/>
+    </svg>
+  </div>
+
+  <!-- ========== ABOUT THE BOOK ========== -->
+  <section class="about-book" id="about">
+    <div class="about-book__glow" aria-hidden="true"></div>
+    <div class="about-book__inner">
+      <div class="about-book__visual reveal">
+        <img src="IMG_0922.jpeg" alt="Кап-Кап на тучке смотрит на землю" class="about-book__img"/>
+        <img src="IMG_0921.jpeg" alt="Кап-Кап на листике" class="about-book__img about-book__img--small"/>
+      </div>
+      <div class="about-book__copy reveal">
+        <span class="section__label">О книге</span>
+        <h2 class="section__title">Удивительные <em>превращения</em> воды</h2>
+        <p>
+          Эта книга — об удивительных превращениях воды. Вместе с Кап-Кап ребёнок узнает,
+          как вода превращается в дождь, снег или росу, и поймёт, что она может менять
+          свою форму, но никуда не исчезает.
+        </p>
+        <p>
+          Читайте книгу вместе с ребёнком. Останавливайтесь на иллюстрациях,
+          задавайте вопросы и наблюдайте за приключениями Кап-Кап.
+        </p>
+        <p>
+          В конце книги малышей ждут простые и интересные опыты, которые они смогут
+          провести сами и ещё лучше познакомиться с природой.
+        </p>
+        <p class="about-book__closing">Приятного чтения!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave -->
+  <div class="wave-divider">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,10 1440,40 L1440,80 L0,80 Z" fill="#ffffff"/>
     </svg>
   </div>
@@ -123,21 +157,23 @@
       <div class="bookshow__viewport">
         <div class="bookshow__track" id="bs-track">
 
-          <!-- Слайд 1: Знакомство -->
+          <!-- Слайд 1: Глава 1 -->
           <div class="slide">
             <div class="slide__illo slide__illo--cover">
               <img src="IMG_0922.jpeg" alt="Кап-Кап на тучке"/>
             </div>
             <div class="slide__text">
-              <h3>Знакомьтесь — Кап-Кап</h3>
-              <p>Маленькая капелька просыпается в тучке и отправляется в удивительное путешествие. Через все превращения она несёт одно:</p>
-              <blockquote>«Я помню. И я вернусь.»</blockquote>
-              <div class="slide__tags">
-                <span>☁️ Тучка</span>
-                <span>🌧️ Дождь</span>
-                <span>🌊 Море</span>
-                <span>❄️ Снег</span>
-                <span>💧 Снова дождь</span>
+              <span class="slide__num">Глава 1</span>
+              <h3>🌥 Рождение Кап-Кап</h3>
+              <p>В огромном голубом небе плыла пушистая тучка. Внутри жила маленькая капелька Кап-Кап. Она любила смотреть вниз — и тихо мечтала увидеть землю…</p>
+              <blockquote>
+                Ветер чуть качнул тучку.<br>
+                Ещё раз…<br>
+                И вдруг Кап-Кап соскользнула вниз.
+              </blockquote>
+              <div class="slide__fact">
+                <strong>💧 Знаешь ли ты?</strong>
+                <span>Тучка состоит из крошечных капелек воды, которые появляются из водяного пара.</span>
               </div>
             </div>
           </div>
@@ -148,6 +184,7 @@
               <img src="illus-summer.png" alt="Мальчик и Кап-Кап летом"/>
             </div>
             <div class="slide__text">
+              <span class="slide__num">Встреча</span>
               <h3>☀️ Лето. Первая встреча</h3>
               <p>Кап-Кап падает с листика и видит мальчика. Она запоминает его — и будет помнить всегда, в каждом превращении.</p>
               <blockquote>
@@ -165,6 +202,7 @@
               <img src="illus-winter.png" alt="Мальчик со снежинкой зимой"/>
             </div>
             <div class="slide__text">
+              <span class="slide__num">Превращение</span>
               <h3>❄️ Зима. Снежинкой на ладошке</h3>
               <p>Кап-Кап превращается в снежинку и опускается на тёплую ладошку того же мальчика. Он не знает, что это она. Но она помнит.</p>
               <blockquote>
@@ -212,16 +250,16 @@
                 <div class="cycle__arr">←</div>
                 <div class="cycle__item">
                   <div class="cycle__icon">🌿</div>
-                  <span>Ручеёк</span>
+                  <span>Роса</span>
                 </div>
                 <div class="cycle__arr">←</div>
                 <div class="cycle__item">
                   <div class="cycle__icon">❄️</div>
-                  <span>Снежинка</span>
+                  <span>Снег</span>
                 </div>
               </div>
             </div>
-            <p class="cycle__caption">14 разворотов · каждое превращение — новая встреча с мальчиком</p>
+            <p class="cycle__caption">Вода меняет форму — но никуда не исчезает</p>
           </div>
 
           <!-- Слайд 5: Что внутри -->
@@ -229,19 +267,19 @@
             <h3 class="slide__feats-title">📚 Что ещё внутри книги</h3>
             <div class="slide__feats">
               <div class="slide__feat">
-                <span>🎵</span>
-                <strong>Ритмичные стихи</strong>
-                <p>С повторами «я помню…» — малыши подхватывают сами</p>
+                <span>📖</span>
+                <strong>Читать вместе</strong>
+                <p>Останавливайтесь на картинках, задавайте вопросы и следите за Кап-Кап</p>
               </div>
               <div class="slide__feat">
                 <span>🧪</span>
                 <strong>Опыты с водой</strong>
-                <p>«Сделай дождь в стакане!» и другие простые эксперименты</p>
+                <p>Простые эксперименты в конце книги — малыш проведёт их сам</p>
               </div>
               <div class="slide__feat">
                 <span>🔬</span>
                 <strong>«Знаешь ли ты?»</strong>
-                <p>Научный блок о круговороте воды — детскими словами</p>
+                <p>Наука детскими словами: откуда берутся тучки, дождь и снег</p>
               </div>
               <div class="slide__feat">
                 <span>🎨</span>
@@ -286,12 +324,12 @@
         <div class="audience-card reveal">
           <div class="audience-card__icon">🧒</div>
           <h3>Малышам от 3 лет</h3>
-          <p>Короткие ритмичные строфы, крупный текст и яркие акварельные картинки — идеально для первого знакомства с книгой.</p>
+          <p>Добрая сказка, крупные иллюстрации и понятные слова — идеально для первого знакомства с книгой о природе.</p>
         </div>
         <div class="audience-card reveal" style="transition-delay:0.15s">
           <div class="audience-card__icon">👩‍👧‍👦</div>
           <h3>Родителям</h3>
-          <p>Опыты и блок «Знаешь ли ты?» дают повод для живого разговора о природе. Читать вместе — вдвойне интереснее.</p>
+          <p>Читайте вместе, останавливайтесь на картинках и задавайте вопросы. Опыты и «Знаешь ли ты?» дают повод для живого разговора.</p>
         </div>
         <div class="audience-card reveal" style="transition-delay:0.3s">
           <div class="audience-card__icon">🎁</div>
